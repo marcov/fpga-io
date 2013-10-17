@@ -1,0 +1,39 @@
+
+# PlanAhead Generated physical constraints 
+
+NET "out_led" LOC = T10;
+
+# PlanAhead Generated IO constraints 
+
+NET "out_led" 			IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;
+NET "in_reset_n" 	   IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE;
+
+# PlanAhead Generated physical constraints 
+
+NET "in_reset_n" LOC = R13;
+NET "in_clk" LOC = R9;
+
+# PlanAhead Generated IO constraints 
+
+NET "in_clk" 		IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE; 
+
+# FTDI related
+NET  "*ftdi*"     IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;
+
+NET  "io_ftdi_data[0]"                                  LOC = "T4" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[1]"                                  LOC = "R5" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[2]"                                  LOC = "T5" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[3]"                                  LOC = "T6" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[4]"                                  LOC = "N7" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[5]"                                  LOC = "P6" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[6]"                                  LOC = "P7" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[7]"                                  LOC = "N8" | SLEW = FAST | DRIVE = 8;     #bank 2 
+
+
+NET  "out_ftdi_rd_n"                                 LOC = "P8" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "in_ftdi_rxf_n"                                 LOC = "P9";     #bank 2 
+NET  "in_ftdi_txe_n"                                 LOC = "N9";     #bank 2 
+NET  "out_ftdi_wr_n"                                 LOC = "T8" | SLEW = FAST | DRIVE = 8;     #bank 2 
+
+# Unconnected!
+#NET  "ftdi_si"                                    LOC = "T7" | SLEW = SLOW | DRIVE = 8;     #bank 2
