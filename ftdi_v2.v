@@ -25,22 +25,24 @@ module ftdiController(in_clk,
                       io_ftdi_data, 
                       out_ftdi_wr, 
                       out_ftdi_rd,
-                      in_tx_data_ready,
-                      in_data_tx,
-                      out_reg_data_rcvd,
-                      out_data_rcvd_ready);
+                      in_ctrl_rx_ena,
+                      in_ctrl_data_rdy,
+                      in_ctrl_data,
+                      out_ctrl_data,
+                      out_ctrl_data_rdy);
 
     input in_clk;
     input in_rst;
     input in_ftdi_txe;       // Asserted by peer when data can be written. Peer tells us: we are allowed to write data.
     input in_ftdi_rxf;   // Asserted by peer to ask us to read data It tells us: do rd_strobe to get the data!
-    input wire in_tx_data_ready;
+    input wire in_ctrl_data_rdy;
     inout [7:0] io_ftdi_data;       // data i/o
     output reg out_ftdi_wr;  // Strobed to signal peer data is available to  be read. It tells the peer: sample data nao!
     output reg out_ftdi_rd;   // Asserted by us to signal peer we're reading data. When it is going high, it allows the peer to refresh io_ftdi_data value. 
-    input  wire [7:0] in_data_tx;
-    output reg  [7:0] out_reg_data_rcvd;
-    output reg  out_data_rcvd_ready; 
+    input  wire [7:0] in_ctrl_data;
+    output reg  [7:0] out_ctrl_data;
+    output reg  out_ctrl_data_rdy;
+    input wire in_ctrl_rx_ena;
 
 //////////
 //  FSM
@@ -77,7 +79,7 @@ module ftdiController(in_clk,
 ///////////
 // Bidirectional port handling.
     reg fdio_io_select;
-    assign io_ftdi_data = fdio_io_select ? in_data_tx : 8'bz;
+    assign io_ftdi_data = fdio_io_select ? in_ctrl_data : 8'bz;
 	 
 ///////////
 // FSM
@@ -92,7 +94,7 @@ module ftdiController(in_clk,
 // - output(t)
 	 
 	 /* Combinatorial logic for state(t+1) */
-    always @ (state, in_ftdi_txe, in_ftdi_rxf, in_tx_data_ready)
+    always @ (state, in_ftdi_txe, in_ctrl_rx_ena, in_ftdi_rxf, in_ctrl_data_rdy)
     begin: next_state_logic
 		/* Set a default state to avoid latches creation */
 		next_state = state;
@@ -100,13 +102,13 @@ module ftdiController(in_clk,
         case (state)
             state_ready :
             begin
-                if (in_ftdi_rxf)
+                if (in_ctrl_rx_ena && in_ftdi_rxf)
                 begin
                    next_state = state_rx_data_avlb;
                 end
                 else
                 begin
-                    if (in_tx_data_ready)
+                    if (in_ctrl_data_rdy)
                     begin
                         next_state = state_tx_data_rdy;
                     end
@@ -120,9 +122,13 @@ module ftdiController(in_clk,
 
             state_rx_data_rcvd:
             begin
-                if (in_tx_data_ready)
+                if (in_ctrl_data_rdy)
                 begin
                     next_state = state_tx_data_rdy;
+                end
+                else
+                begin
+                    next_state = state_ready;
                 end
             end
 
@@ -131,6 +137,10 @@ module ftdiController(in_clk,
                 if (in_ftdi_txe)
                 begin
                     next_state = state_tx_data_gnt;
+                end
+                else 
+                begin
+                    next_state = state_ready;
                 end
             end
             
@@ -156,7 +166,7 @@ module ftdiController(in_clk,
         begin
             state             <= state_ready;
             delay_counter     <= 0;
-			out_reg_data_rcvd <= 0;
+			out_ctrl_data <= 0;
         end
         else
         begin
@@ -169,7 +179,7 @@ module ftdiController(in_clk,
                         if (delay_counter == t3_rd_to_sample)
                         begin
                             // sample input.
-                            out_reg_data_rcvd  <= io_ftdi_data;
+                            out_ctrl_data  <= io_ftdi_data;
                         end   
                     end
                     else
@@ -223,49 +233,49 @@ module ftdiController(in_clk,
                 out_ftdi_wr = 0;
                 fdio_io_select = 0;
                 out_ftdi_rd = 0;
-                out_data_rcvd_ready = 0;
+                out_ctrl_data_rdy = 0;
             end
             state_rx_data_avlb:
             begin
                 out_ftdi_wr = 0;
                 fdio_io_select = 0;
                 out_ftdi_rd = 1;
-                out_data_rcvd_ready = 0;
+                out_ctrl_data_rdy = 0;
             end
             state_rx_data_rcvd:
             begin
                 out_ftdi_wr = 0;
                 fdio_io_select = 0;
                 out_ftdi_rd = 0;
-                out_data_rcvd_ready = 1;
+                out_ctrl_data_rdy = 1;
             end
             state_tx_data_rdy:
             begin
                 out_ftdi_wr = 0; 
                 fdio_io_select = 0;
                 out_ftdi_rd = 0;
-                out_data_rcvd_ready = 0;
+                out_ctrl_data_rdy = 0;
             end
             state_tx_data_gnt:
             begin
                 out_ftdi_wr = 0;
                 fdio_io_select = 1;
                 out_ftdi_rd = 0;
-                out_data_rcvd_ready = 0;
+                out_ctrl_data_rdy = 0;
             end
             state_tx_data_hld:
             begin
                 out_ftdi_wr = 1;
                 fdio_io_select = 1;
                 out_ftdi_rd = 0;
-                out_data_rcvd_ready = 0;
+                out_ctrl_data_rdy = 0;
 				end
             default:   
             begin
                 out_ftdi_wr = 0; 
                 fdio_io_select = 0;
                 out_ftdi_rd = 0;
-                out_data_rcvd_ready = 0;
+                out_ctrl_data_rdy = 0;
             end
         endcase
     end
