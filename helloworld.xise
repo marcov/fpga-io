@@ -25,10 +25,6 @@
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="3"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="3"/>
     </file>
-    <file xil_pn:name="ftdi.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="2"/>
-      <association xil_pn:name="Implementation" xil_pn:seqID="2"/>
-    </file>
     <file xil_pn:name="ledon.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="1"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="1"/>
@@ -47,6 +43,10 @@
       <association xil_pn:name="PostMapSimulation" xil_pn:seqID="125"/>
       <association xil_pn:name="PostRouteSimulation" xil_pn:seqID="125"/>
       <association xil_pn:name="PostTranslateSimulation" xil_pn:seqID="125"/>
+    </file>
+    <file xil_pn:name="ftdi_v2.v" xil_pn:type="FILE_VERILOG">
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="137"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="2"/>
     </file>
   </files>
 

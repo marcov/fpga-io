@@ -47,48 +47,66 @@ assign out_ftdi_rd_n = !out_ftdi_rd_p;
 wire [7:0] data_rx;
 reg  [7:0] data_tx;
 reg  tx_ready;
-							 
-ftdiController ftdicon (
-                        .in_clk(in_clk),
+reg  rx_ena;
+reg  rx_counter;
+reg  [7:0] rx_buffer;						 
+	
+ftdiController  ftdicon(.in_clk(in_clk),
                         .in_rst(in_reset_p),
                         .in_ftdi_txe(in_ftdi_txe_p), 
                         .in_ftdi_rxf(in_ftdi_rxf_p),
                         .io_ftdi_data(io_ftdi_data), 
                         .out_ftdi_wr(out_ftdi_wr_p), 
                         .out_ftdi_rd(out_ftdi_rd_p),
-                        .in_tx_data_ready(tx_ready),
-                        .in_data_tx(data_tx),
-                        .out_reg_data_rcvd(data_rx),
-                        .out_data_rcvd_ready(rx_ready)
-                        );
-	
+                        .in_ctrl_rx_ena(rx_ena),
+                        .in_ctrl_data_rdy(tx_ready),
+                        .in_ctrl_data(data_tx),
+                        .out_ctrl_data(data_rx),
+                        .out_ctrl_data_rdy(rx_ready));
 	
 	//Debug
 	reg [24:0] counter;
 	
-	always @ (data_rx, rx_ready)
-	begin
-		data_tx  = ~data_rx;
-        if (rx_ready)
-        begin
-            tx_ready = 1;
-        end
-        else
-        begin
-            tx_ready = 0;
-        end
-	end
-
 
     always @ (posedge in_clk, negedge in_reset_n)
 	 begin
 		if(!in_reset_n)
 		begin
 			counter  <= 0;
+			rx_ena   <= 1;
 		end
 		else
 		begin
           counter  <= counter + 1;
+          
+          if (rx_ready)
+          begin
+              case (rx_counter)
+                  0:
+                  begin
+                    rx_counter    <= rx_counter + 1;
+                    rx_buffer     <= data_rx;
+                  end
+                  
+                  default:
+                    begin
+                        if (rx_buffer == 16'hAA)
+                        begin
+                            data_tx <= ~data_rx; 
+                        end
+                        else
+                        begin
+                            data_tx <= data_rx;
+                        end
+                        tx_ready   <= 1;
+                        rx_counter <= 0;
+                    end
+              endcase
+          end
+          else
+          begin
+              tx_ready <= 0;
+          end
 		end
 	end
 
