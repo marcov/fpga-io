@@ -47,22 +47,24 @@ assign out_ftdi_rd_n = !out_ftdi_rd_p;
 wire [7:0] data_rx;
 reg  [7:0] data_tx;
 reg  tx_ready;
-reg  rx_ena;
+reg  rx_enabled;
+reg  rx_cons_ready;
 reg  rx_counter;
 reg  [7:0] rx_buffer;						 
 	
-ftdiController  ftdicon(.in_clk(in_clk),
-                        .in_rst(in_reset_p),
-                        .in_ftdi_txe(in_ftdi_txe_p), 
-                        .in_ftdi_rxf(in_ftdi_rxf_p),
-                        .io_ftdi_data(io_ftdi_data), 
-                        .out_ftdi_wr(out_ftdi_wr_p), 
-                        .out_ftdi_rd(out_ftdi_rd_p),
-                        .in_ctrl_rx_ena(rx_ena),
-                        .in_ctrl_data_rdy(tx_ready),
-                        .in_ctrl_data(data_tx),
-                        .out_ctrl_data(data_rx),
-                        .out_ctrl_data_rdy(rx_ready));
+ftdiController  ftdicon(.in_clk           (in_clk),
+                        .in_rst           (in_reset_p),
+                        .in_ftdi_txe      (in_ftdi_txe_p), 
+                        .in_ftdi_rxf      (in_ftdi_rxf_p),
+                        .io_ftdi_data     (io_ftdi_data), 
+                        .out_ftdi_wr      (out_ftdi_wr_p), 
+                        .out_ftdi_rd      (out_ftdi_rd_p),
+                        .in_ctrl_rx_ena   (rx_enabled),
+                        .in_ctrl_data_rdy (tx_ready),
+                        .in_ctrl_data     (data_tx),
+                        .out_ctrl_data    (data_rx),
+                        .out_ctrl_rx_prd_rdy(rx_prod_ready),
+                        .in_ctrl_rx_cons_rdy(rx_cons_ready));
 	
 	//Debug
 	reg [24:0] counter;
@@ -72,46 +74,55 @@ ftdiController  ftdicon(.in_clk(in_clk),
 	 begin
 		if(!in_reset_n)
 		begin
-			counter  <= 0;
-			rx_ena   <= 1;
+			counter      <= 0;
+			rx_enabled   <= 1;
+            rx_counter   <= 0;
 		end
 		else
 		begin
           counter  <= counter + 1;
           
-          if (rx_ready)
-          begin
-              case (rx_counter)
-                  0:
-                  begin
-                    rx_counter    <= rx_counter + 1;
-                    rx_buffer     <= data_rx;
-                  end
-                  
-                  default:
-                    begin
-                        if (rx_buffer == 16'hAA)
-                        begin
-                            data_tx <= ~data_rx; 
-                        end
-                        else
-                        begin
-                            data_tx <= data_rx;
-                        end
-                        tx_ready   <= 1;
-                        rx_counter <= 0;
-                    end
-              endcase
-          end
-          else
-          begin
-              tx_ready <= 0;
-          end
 		end
 	end
 
-ledon ledon(.clk(in_clk),
-				.reset_n(in_reset_n),
-				.out(out_led));
+    //CHANGE THIS IN STATE MACHINE! 
+    always @ (posedge rx_prod_ready)
+    begin
+        rx_cons_ready <= 1;
+        case (rx_counter)
+          0:
+          begin
+            rx_counter    <= rx_counter + 1;
+            rx_buffer     <= data_rx;
+          end
+          
+          default:
+            begin
+                if (rx_buffer == 16'hAA)
+                begin
+                    data_tx <= ~data_rx; 
+                end
+                else
+                begin
+                    data_tx <= data_rx;
+                end
+                tx_ready   <= 1;
+                rx_counter <= 0;
+            end
+        endcase
+    end
+
+    //CHANGE THIS IN STATE MACHINE!!
+    always @ (negedge rx_prod_ready)
+    begin
+        rx_cons_ready <= 0;
+        
+        // TO BE MOVED ELSEWHERE! ---> interlock sync for TX AS WELL!!
+        tx_ready      <= 0;
+    end
+
+ledon ledon(.clk    (in_clk),
+			.reset_n(in_reset_n),
+			.out    (out_led));
 
 endmodule

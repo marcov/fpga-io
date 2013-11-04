@@ -29,7 +29,8 @@ module ftdiController(in_clk,
                       in_ctrl_data_rdy,
                       in_ctrl_data,
                       out_ctrl_data,
-                      out_ctrl_data_rdy);
+                      out_ctrl_rx_prd_rdy,
+                      in_ctrl_rx_cons_rdy);
 
     input in_clk;
     input in_rst;
@@ -41,8 +42,9 @@ module ftdiController(in_clk,
     output reg out_ftdi_rd;   // Asserted by us to signal peer we're reading data. When it is going high, it allows the peer to refresh io_ftdi_data value. 
     input  wire [7:0] in_ctrl_data;
     output reg  [7:0] out_ctrl_data;
-    output reg  out_ctrl_data_rdy;
+    output reg  out_ctrl_rx_prd_rdy;
     input wire in_ctrl_rx_ena;
+    input wire in_ctrl_rx_cons_rdy;
 
 //////////
 //  FSM
@@ -122,13 +124,17 @@ module ftdiController(in_clk,
 
             state_rx_data_rcvd:
             begin
-                if (in_ctrl_data_rdy)
+                //Interlocked synchronization. Hold on.
+                if (in_ctrl_rx_cons_rdy)
                 begin
-                    next_state = state_tx_data_rdy;
-                end
-                else
-                begin
-                    next_state = state_ready;
+                    if (in_ctrl_data_rdy)
+                    begin
+                        next_state = state_tx_data_rdy;
+                    end
+                    else
+                    begin
+                        next_state = state_ready;
+                    end
                 end
             end
 
@@ -233,49 +239,49 @@ module ftdiController(in_clk,
                 out_ftdi_wr = 0;
                 fdio_io_select = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_data_rdy = 0;
+                out_ctrl_rx_prd_rdy = 0;
             end
             state_rx_data_avlb:
             begin
                 out_ftdi_wr = 0;
                 fdio_io_select = 0;
                 out_ftdi_rd = 1;
-                out_ctrl_data_rdy = 0;
+                out_ctrl_rx_prd_rdy = 0;
             end
             state_rx_data_rcvd:
             begin
                 out_ftdi_wr = 0;
                 fdio_io_select = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_data_rdy = 1;
+                out_ctrl_rx_prd_rdy = 1;
             end
             state_tx_data_rdy:
             begin
                 out_ftdi_wr = 0; 
                 fdio_io_select = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_data_rdy = 0;
+                out_ctrl_rx_prd_rdy = 0;
             end
             state_tx_data_gnt:
             begin
                 out_ftdi_wr = 0;
                 fdio_io_select = 1;
                 out_ftdi_rd = 0;
-                out_ctrl_data_rdy = 0;
+                out_ctrl_rx_prd_rdy = 0;
             end
             state_tx_data_hld:
             begin
                 out_ftdi_wr = 1;
                 fdio_io_select = 1;
                 out_ftdi_rd = 0;
-                out_ctrl_data_rdy = 0;
+                out_ctrl_rx_prd_rdy = 0;
 				end
             default:   
             begin
                 out_ftdi_wr = 0; 
                 fdio_io_select = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_data_rdy = 0;
+                out_ctrl_rx_prd_rdy = 0;
             end
         endcase
     end
