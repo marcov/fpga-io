@@ -1,5 +1,4 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
 // 
@@ -17,7 +16,7 @@
 // Revision 0.01 - File Created
 // Additional Comments: 
 //
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 module ftdiController(in_clk,
                       in_rst,
                       in_ftdi_txe, 
@@ -25,54 +24,59 @@ module ftdiController(in_clk,
                       io_ftdi_data, 
                       out_ftdi_wr, 
                       out_ftdi_rd,
-                      in_ctrl_rx_ena,
-                      in_ctrl_tx_data_rdy,
-                      out_ctrl_tx_me_rdy,
-                      in_ctrl_data,
-                      out_ctrl_data,
-                      out_ctrl_rx_me_rdy,
-                      in_ctrl_rx_cons_rdy);
-
+                      in_rx_en,
+                      in_tx_hsk_req,
+                      out_tx_hsk_ack,
+                      in_tx_data,
+                      out_rx_data,
+                      out_rx_hsk_req,
+                      in_rx_hsk_ack);
+//////////                  
+// Input / output    
     input in_clk;
     input in_rst;
-    input in_ftdi_txe;       // Asserted by peer when data can be written. Peer tells us: we are allowed to write data.
-    input in_ftdi_rxf;   // Asserted by peer to ask us to read data It tells us: do rd_strobe to get the data!
     
-    // Synch interlocking for data to TX to FTDI.
-    input wire in_ctrl_tx_data_rdy;
-    output reg out_ctrl_tx_me_rdy;
-
-    // Synch interlocking for data to TX to external block.
-    input  wire in_ctrl_rx_cons_rdy;
-    output reg  out_ctrl_rx_me_rdy;
+    // From: FTDI. Asserted by FTDI when data can be written.
+    input wire in_ftdi_txe;       
+    // From: FTDI. Asserted by FTDI when data can be read.
+    input wire in_ftdi_rxf;   
+    // To: FTDI. Strobed on data writing.
+    output reg out_ftdi_wr;
+    // To: FTDI. Strobed on data reading.
+    output reg out_ftdi_rd;
+    // To/From: FTDI. 8-bit parallel data input/output.
+    inout [7:0] io_ftdi_data;       
+    // To: Top level. Used to enable/disable RX.
+    input wire in_rx_en;
+    // From: Top level. Data to send to FTDI.
+    input  wire [7:0] in_tx_data;
+    // To: Top level. Data received from FTDI.
+    output reg  [7:0] out_rx_data;
+    // TX handshake interlock request/acknowledge.
+    input wire in_tx_hsk_req;
+    output reg out_tx_hsk_ack;
+    // RX handshake interlock request/acknowledge.
+    output reg  out_rx_hsk_req;
+    input  wire in_rx_hsk_ack;
     
-    
-    inout [7:0] io_ftdi_data;       // data i/o
-    output reg out_ftdi_wr;  // Strobed to signal peer data is available to  be read. It tells the peer: sample data nao!
-    output reg out_ftdi_rd;   // Asserted by us to signal peer we're reading data. When it is going high, it allows the peer to refresh io_ftdi_data value. 
-    input  wire [7:0] in_ctrl_data;
-    output reg  [7:0] out_ctrl_data;
-    
-    input wire in_ctrl_rx_ena;
-
 //////////
 //  FSM
     reg [2:0] state;
     reg [2:0] next_state;
 
-    localparam state_ready                 = 3'd0,
-               state_rx_data_avlb          = 3'd1,
-               state_rx_data_rcvd          = 3'd2,
-               state_tx_data_wait_lock     = 3'd3,
-               state_tx_data_rdy           = 3'd4,
-               state_tx_data_gnt           = 3'd5,
-               state_tx_data_hld           = 3'd6;
+    localparam state_ready           = 3'd0,
+               state_rx_data_avlb    = 3'd1,
+               state_rx_data_hsk    = 3'd2,
+               state_tx_data_hsk     = 3'd3,
+               state_tx_data_rdy     = 3'd4,
+               state_tx_data_gnt     = 3'd5,
+               state_tx_data_hld     = 3'd6;
 
 ///////////
-// Delays 
+// Timing definitions for FTDI reading/writing.
     reg [2:0] delay_counter;
     
-	 //1 tick = 15ns
+	 //Calculation based on 1 tick = 15ns when running at 66MHz
 
 	 // min 30 ns
     localparam t4_rd_active    = 4;
@@ -88,16 +92,23 @@ module ftdiController(in_clk,
 	 // min 5ns
 	 localparam t9_wr_to_hold   = 2;
 
-///////////
-// Bidirectional port handling.
-    reg fdio_io_select;
-    assign io_ftdi_data = fdio_io_select ? in_ctrl_data : 8'bz;
+////////////
+//  FTDI I/O bidirectional buffer control. Aka IOBUF. 
+//  (note that IOBUF input/output naming is opposite than FPGA point of view):
+//   - INPUT: from FPGA to PAD.
+//   - OUTPUT: from PAD to FPGA.
+//   - T: when high, set OUTPUT buffer in three-state mode.
+    reg ftdi_output_enable;
     
 //////////
 // Token for switching of priority RX/TX
     localparam token_priority_rx = 1'd0,
                token_priority_tx = 1'd1;
     reg token_priority;
+    
+///////////
+// Bidirectional FTDI I/O handling.
+    assign io_ftdi_data = ftdi_output_enable ? in_tx_data : 8'bz;
     
 ///////////
 // FSM
@@ -114,80 +125,82 @@ module ftdiController(in_clk,
 	 /* Combinatorial logic for state(t+1) */
     always @ (state,
               in_ftdi_txe, 
-              in_ctrl_rx_ena, 
+              in_rx_en, 
               in_ftdi_rxf, 
-              in_ctrl_tx_data_rdy,
-              in_ctrl_rx_cons_rdy,
+              in_tx_hsk_req,
+              in_rx_hsk_ack,
               token_priority)
     begin: next_state_logic
-		/* Set a default state to avoid latches creation */
-		next_state = state;
+        /* Set a default state to avoid latches creation */
+        next_state = state;
                 
         case (state)
+            // Ready to receive/transmit.
             state_ready :
             begin
                 if (token_priority == token_priority_rx)
                 begin
-                    if (in_ctrl_rx_ena && in_ftdi_rxf)
+                    if (in_rx_en && in_ftdi_rxf)
                     begin
                        next_state = state_rx_data_avlb;
                     end
-                    else if (in_ctrl_tx_data_rdy)
+                    else if (in_tx_hsk_req)
                     begin
-                        next_state = state_tx_data_wait_lock;
+                        next_state = state_tx_data_hsk;
                     end
                 end
                 else if (token_priority == token_priority_tx)
                 begin
-                    if (in_ctrl_tx_data_rdy)
+                    if (in_tx_hsk_req)
                     begin
-                        next_state = state_tx_data_wait_lock;
+                        next_state = state_tx_data_hsk;
                     end
-                    else if (in_ctrl_rx_ena && in_ftdi_rxf)
+                    else if (in_rx_en && in_ftdi_rxf)
                     begin
                        next_state = state_rx_data_avlb;
                     end
                 end
-                
             end
-
+            
+            // RX 1B from FTDI completed.
             state_rx_data_avlb:
             begin
-                next_state     = state_rx_data_rcvd;
+                next_state = state_rx_data_hsk;
             end
-
-            state_rx_data_rcvd:
+            
+            // Handshake for passing RX byte to top-level.
+            state_rx_data_hsk:
             begin
-                //Interlocked synchronization. Hold on.
-                if (in_ctrl_rx_cons_rdy)
+                //handshake synchronization. Hold on.
+                if (in_rx_hsk_ack)
                 begin
                     next_state = state_ready;
                 end
             end
-
-            state_tx_data_wait_lock:
+            
+            //Handshake for receiving TX data from top-level.
+            state_tx_data_hsk:
             begin
-                if (in_ctrl_tx_data_rdy == 0)
+                if (in_tx_hsk_req == 0)
                     next_state = state_tx_data_rdy;
             end
             
+            //TX ready, waiting for FTDI allowance.
             state_tx_data_rdy:
             begin
                 if (in_ftdi_txe)
                 begin
                     next_state = state_tx_data_gnt;
                 end
-                else 
-                begin
-                    next_state = state_ready;
-                end
             end
             
+            //TX granted from FTDI, holding WR strobe.
             state_tx_data_gnt:
             begin
                 next_state = state_tx_data_hld;
             end
             
+            //TX 1 byte completed.
             state_tx_data_hld:
             begin
                next_state = state_ready;
@@ -205,7 +218,7 @@ module ftdiController(in_clk,
         begin
             state             <= state_ready;
             delay_counter     <= 0;
-			out_ctrl_data     <= 0;
+            out_rx_data       <= 0;
             token_priority    <= token_priority_rx;
         end
         else
@@ -221,7 +234,7 @@ module ftdiController(in_clk,
                         if (delay_counter == t3_rd_to_sample)
                         begin
                             // sample input.
-                            out_ctrl_data  <= io_ftdi_data;
+                            out_rx_data  <= io_ftdi_data;
                         end   
                     end
                     else
@@ -242,7 +255,7 @@ module ftdiController(in_clk,
                     else
                     begin
                         delay_counter <= 0;
-                        state         <= next_state;
+                        state <= next_state;
                     end
                 end
 
@@ -256,13 +269,13 @@ module ftdiController(in_clk,
                     else
                     begin
                         delay_counter <= 0;
-                        state         <= next_state;
+                        state <= next_state;
                     end
                 end
 
                 default:
                 begin
-                    state          <= next_state;
+                    state <= next_state;
                 end
             endcase
         end
@@ -275,66 +288,66 @@ module ftdiController(in_clk,
             state_ready:
             begin
                 out_ftdi_wr = 0;
-                fdio_io_select = 0;
+                ftdi_output_enable = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_rx_me_rdy = 0;
-                out_ctrl_tx_me_rdy = 0;
+                out_rx_hsk_req = 0;
+                out_tx_hsk_ack = 0;
             end
             state_rx_data_avlb:
             begin
                 out_ftdi_wr = 0;
-                fdio_io_select = 0;
+                ftdi_output_enable = 0;
                 out_ftdi_rd = 1;
-                out_ctrl_rx_me_rdy = 0;
-                out_ctrl_tx_me_rdy = 0;
+                out_rx_hsk_req = 0;
+                out_tx_hsk_ack = 0;
             end
-            state_rx_data_rcvd:
+            state_rx_data_hsk:
             begin
                 out_ftdi_wr = 0;
-                fdio_io_select = 0;
+                ftdi_output_enable = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_rx_me_rdy = 1;
-                out_ctrl_tx_me_rdy = 0;
+                out_rx_hsk_req = 1;
+                out_tx_hsk_ack = 0;
             end
-            state_tx_data_wait_lock:
+            state_tx_data_hsk:
             begin
                 out_ftdi_wr = 0; 
-                fdio_io_select = 0;
+                ftdi_output_enable = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_rx_me_rdy = 0;
-                out_ctrl_tx_me_rdy = 1;
+                out_rx_hsk_req = 0;
+                out_tx_hsk_ack = 1;
             end
             state_tx_data_rdy:
             begin
                 out_ftdi_wr = 0; 
-                fdio_io_select = 0;
+                ftdi_output_enable = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_rx_me_rdy = 0;
-                out_ctrl_tx_me_rdy = 0;
+                out_rx_hsk_req = 0;
+                out_tx_hsk_ack = 0;
             end
             state_tx_data_gnt:
             begin
                 out_ftdi_wr = 0;
-                fdio_io_select = 1;
+                ftdi_output_enable = 1;
                 out_ftdi_rd = 0;
-                out_ctrl_rx_me_rdy = 0;
-                out_ctrl_tx_me_rdy = 0;
+                out_rx_hsk_req = 0;
+                out_tx_hsk_ack = 0;
             end
             state_tx_data_hld:
             begin
                 out_ftdi_wr = 1;
-                fdio_io_select = 1;
+                ftdi_output_enable = 1;
                 out_ftdi_rd = 0;
-                out_ctrl_rx_me_rdy = 0;
-                out_ctrl_tx_me_rdy = 0;
+                out_rx_hsk_req = 0;
+                out_tx_hsk_ack = 0;
 				end
             default:   
             begin
                 out_ftdi_wr = 0; 
-                fdio_io_select = 0;
+                ftdi_output_enable = 0;
                 out_ftdi_rd = 0;
-                out_ctrl_rx_me_rdy = 0;
-                out_ctrl_tx_me_rdy = 0;
+                out_rx_hsk_req = 0;
+                out_tx_hsk_ack = 0;
             end
         endcase
     end

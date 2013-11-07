@@ -93,14 +93,13 @@ module top(
                             .io_ftdi_data         (io_ftdi_data), 
                             .out_ftdi_wr          (out_ftdi_wr_p), 
                             .out_ftdi_rd          (out_ftdi_rd_p),
-                            .in_ctrl_rx_ena       (rx_enabled),
-                            .in_ctrl_tx_data_rdy  (tx_me_rdy),
-                            .out_ctrl_tx_me_rdy   (tx_ftdi_rdy),
-                            .in_ctrl_data         (data_tx),
-                            .out_ctrl_data        (data_rx),
-                            .out_ctrl_rx_me_rdy   (rx_ftdi_rdy),
-                            .in_ctrl_rx_cons_rdy  (rx_me_rdy));
-	
+                            .in_rx_en             (rx_enabled),
+                            .in_tx_hsk_req        (tx_me_rdy),
+                            .out_tx_hsk_ack       (tx_ftdi_rdy),
+                            .in_tx_data           (data_tx),
+                            .out_rx_data          (data_rx),
+                            .out_rx_hsk_req       (rx_ftdi_rdy),
+                            .in_rx_hsk_ack        (rx_me_rdy));
 
 	
         // State machine:  state(t+1) logic (combinatorial)
