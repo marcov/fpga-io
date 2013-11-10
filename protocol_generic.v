@@ -22,10 +22,10 @@ module comm_handler    (in_clk,
     // Generic
     output reg out_rx_enable;
 
-    // Local registers/wires.
-    // Synchronization between state machine and transmission logic.
-    reg rx_rdy;
-                       
+    // Synchronization with protocol decoder.
+    reg rx_done;
+    reg tx_done;
+    
     //////////
     //  FSM
     reg [2:0] state;
@@ -45,7 +45,8 @@ module comm_handler    (in_clk,
                              .in_rst   (in_rst),
                              .data_rx  (in_data_rx),
                              .data_tx  (out_data_tx),
-                             .rx_rdy   (rx_rdy),
+                             .rx_done  (rx_done),
+                             .tx_done  (tx_done),
                              .rx_trig  (rx_continue),
                              .tx_trig  (tx_continue));
 
@@ -100,7 +101,7 @@ module comm_handler    (in_clk,
                     if (tx_continue)
                         // More to transmit.
                         next_state = state_tx_data_ready;
-                    else
+                    else if (rx_continue)
                         // Nothing to transmit.
                         next_state = state_rx_ready;
                 end
@@ -116,8 +117,9 @@ module comm_handler    (in_clk,
 	begin
         if(in_rst)
         begin
-            state  <= state_rx_ready;
-            rx_rdy <= 0;
+            state   <= state_rx_ready;
+            rx_done <= 0;
+            tx_done <= 0;
         end
         else
         begin
@@ -125,12 +127,21 @@ module comm_handler    (in_clk,
             state <= next_state;
             
             ///////////////////////////////////////
-            // Make rx_rdy high duration of 1 clock cycle.
+            // Make rx_done high duration of 1 clock cycle.
             if (state == state_rx_data_rcvd && 
                 next_state == state_proto_decoding)
-                rx_rdy <= 1;
+                rx_done <= 1;
             else
-                rx_rdy <= 0;  
+                rx_done <= 0;  
+                
+            ///////////////////////////////////////
+            // Make tx_done high duration of 1 clock cycle.
+            if (state == state_tx_data_hsk_req && 
+                next_state == state_tx_data_hsk_ack)
+                tx_done <= 1;
+            else
+                tx_done <= 0;  
+                
         end
 	end
 
@@ -186,7 +197,8 @@ module proto_generic  (input  in_clk,
                        input  in_rst,
                        input      [7:0] data_rx,
                        output reg [7:0] data_tx,
-                       input  rx_rdy,
+                       input  rx_done,
+                       input  tx_done,
                        output reg rx_trig,
                        output reg tx_trig);
     /*
@@ -200,14 +212,16 @@ module proto_generic  (input  in_clk,
                 state_proto_rcdv_txing;
     */ 
     
-    reg [1:0]   state;    
+    reg [2:0]   state;    
     localparam  state_proto_idle      = 0,
                 state_proto_rcdv_cmd  = 1,  
                 state_proto_rcdv_data = 2,
-                state_proto_txing_ans = 3;
+                state_proto_txing_ans = 3,
+                state_proto_tx_next   = 4;
     
     reg [7:0] cmd;
     reg [7:0] data;
+    reg [1:0] tx_size;
     
     /////////////////////////////////////////
     always @ (posedge in_clk, posedge in_rst)
@@ -231,7 +245,7 @@ module proto_generic  (input  in_clk,
             case (state)   
                 state_proto_idle:
                 begin
-                    if (rx_rdy)
+                    if (rx_done)
                     begin
                         cmd     <= data_rx;
                         state   <= state_proto_rcdv_cmd;
@@ -241,7 +255,7 @@ module proto_generic  (input  in_clk,
                 
                 state_proto_rcdv_cmd:
                 begin
-                    if (rx_rdy)
+                    if (rx_done)
                     begin
                         data    <= data_rx;
                         state   <= state_proto_rcdv_data;
@@ -254,31 +268,57 @@ module proto_generic  (input  in_clk,
                     state   <= state_proto_txing_ans;
                 
                     case (cmd)
-                        8'hAA:
+                        8'h00:
                         begin
                             data_tx <= cmd;
                             tx_trig <= 1;
-                            state <= state_proto_txing_ans; 
+                            tx_size <= 1;
                         end
                     
-                        8'h55:
+                        8'h01:
                         begin
                             data_tx <= data;
                             tx_trig <= 1;
+                            tx_size <= 1;
                         end
                     
                         default:
                         begin
                             data_tx <= cmd + data;
                             tx_trig <= 1;
+                            tx_size <= 3;
                         end
                     endcase
                 end
                 
                 state_proto_txing_ans:
                 begin
-                    state <= state_proto_idle;
+                    if (tx_size - 1 > 0)
+                    begin
+                        tx_size <= tx_size - 1;
+                        state <= state_proto_tx_next;
+                    end
+                    else
+                    begin
+                        if (tx_done)
+                        begin
+                            tx_size <= 0;
+                            rx_trig <= 1;
+                            state   <= state_proto_idle;
+                        end
+                    end
                 end
+                
+                state_proto_tx_next:
+                begin
+                    if (tx_done)
+                    begin
+                        data_tx <= tx_size;
+                        tx_trig <= 1;
+                        state   <= state_proto_txing_ans;
+                    end
+                end
+                
             endcase
         end
     end              
