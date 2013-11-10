@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
 // 
@@ -17,7 +17,7 @@
 // Revision 0.01 - File Created
 // Additional Comments: 
 //
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 module top(
     input in_ext_osc,
     input in_reset_n,
@@ -26,7 +26,7 @@ module top(
     input in_ftdi_rxf_n,
     input in_ftdi_txe_n,
     output out_ftdi_wr_n,
-    output out_ftdi_rd_n 
+    output out_ftdi_rd_n
     );
 
     // FTDI Wires for logic conversion to FTDI modules.
@@ -50,8 +50,6 @@ module top(
     clockgen clkgen (
         .CLKIN_IN        (in_ext_osc), 
         .RST_IN          (in_reset_p), 
-        .CLKDV_OUT       (clk_top_div), 
-        .CLKIN_IBUFG_OUT (clk_extosc_buf), 
         .CLK0_OUT        (clk_top_main) 
         );
     

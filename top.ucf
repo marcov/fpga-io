@@ -37,3 +37,7 @@ NET  "out_ftdi_wr_n"                                 LOC = "T8" | SLEW = FAST | 
 
 # Unconnected!
 #NET  "ftdi_si"                                    LOC = "T7" | SLEW = SLOW | DRIVE = 8;     #bank 2
+
+#TEST
+NET "out_test"          LOC = D13;
+NET "out_test" 			IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;

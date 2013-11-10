@@ -200,7 +200,8 @@ module proto_generic  (input  in_clk,
                        input  rx_done,
                        input  tx_done,
                        output reg rx_trig,
-                       output reg tx_trig);
+                       output reg tx_trig,
+                       output reg out_3w);
     /*
     // Protocol SM          
     localparam  state_proto_idle,
@@ -280,6 +281,7 @@ module proto_generic  (input  in_clk,
                             data_tx <= data;
                             tx_trig <= 1;
                             tx_size <= 1;
+                            out_3w  <= 1;
                         end
                     
                         default:
