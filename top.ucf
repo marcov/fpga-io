@@ -11,11 +11,11 @@ NET "in_reset_n" 	   IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE;
 # PlanAhead Generated physical constraints 
 
 NET "in_reset_n" LOC = R13;
-NET "in_clk" LOC = R9;
+NET "in_ext_osc" LOC = R9;
 
 # PlanAhead Generated IO constraints 
 
-NET "in_clk" 		IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE; 
+NET "in_ext_osc" 		IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE; 
 
 # FTDI related
 NET  "*ftdi*"     IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;

@@ -19,7 +19,7 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 module top(
-    input in_clk,
+    input in_ext_osc,
     input in_reset_n,
     output out_led,
     inout [7:0] io_ftdi_data,
@@ -43,50 +43,23 @@ module top(
 
     assign out_ftdi_wr_n = !out_ftdi_wr_p;
     assign out_ftdi_rd_n = !out_ftdi_rd_p;
-
-    // Local registers/wires.
+               
+            
+               
+    // Instantiation of clockgen
+    clockgen clkgen (
+        .CLKIN_IN        (in_ext_osc), 
+        .RST_IN          (in_reset_p), 
+        .CLKDV_OUT       (clk_top_div), 
+        .CLKIN_IBUFG_OUT (clk_extosc_buf), 
+        .CLK0_OUT        (clk_top_main) 
+        );
+    
     wire [7:0] data_rx;
-    reg  [7:0] data_tx;
-    reg  rx_enabled;
-
-    reg  [2:0] rx_counter;
-    reg  [2:0] tx_counter;
+    wire [7:0] data_tx;
     
-    reg  [7:0] rx_buffer;
-	//Debug
-	reg [24:0] counter;
-    
-    
-    /// RX interlocking sync control signals.
-    // ftdicon is the producer
-    // me is the consumer.
-    reg  rx_me_rdy;
-    wire rx_ftdi_rdy;
-    
-    /// TX interlocking sync control signals.
-    // me is the producer
-    // ftdicon is the consumer
-    reg  tx_me_rdy;
-    wire tx_ftdi_rdy;
-    
-    // Synchronization between state machine and transmission logic.
-    reg tx_ready;
-        
-//////////
-//  FSM
-    reg [2:0] state;
-    reg [2:0] next_state;
-    // State machine states
-    localparam state_ready           = 3'd0,
-               state_rx_ftdi_ready   = 3'd1,
-               state_processing      = 3'd2,
-               state_tx_ready        = 3'd3,
-               state_tx_me_ready     = 3'd4,
-               state_tx_ftdi_ready   = 3'd5;
-               
-               
     // Instantiation of ftdiController module.
-    ftdiController  ftdicon(.in_clk               (in_clk),
+    ftdiController  ftdicon(.in_clk               (clk_top_main),
                             .in_rst               (in_reset_p),
                             .in_ftdi_txe          (in_ftdi_txe_p), 
                             .in_ftdi_rxf          (in_ftdi_rxf_p),
@@ -94,219 +67,25 @@ module top(
                             .out_ftdi_wr          (out_ftdi_wr_p), 
                             .out_ftdi_rd          (out_ftdi_rd_p),
                             .in_rx_en             (rx_enabled),
-                            .in_tx_hsk_req        (tx_me_rdy),
-                            .out_tx_hsk_ack       (tx_ftdi_rdy),
+                            .in_tx_hsk_req        (data_tx_req),
+                            .out_tx_hsk_ack       (data_tx_ack),
                             .in_tx_data           (data_tx),
                             .out_rx_data          (data_rx),
-                            .out_rx_hsk_req       (rx_ftdi_rdy),
-                            .in_rx_hsk_ack        (rx_me_rdy));
+                            .out_rx_hsk_req       (data_rx_req),
+                            .in_rx_hsk_ack        (data_rx_ack));
 
-	
-        // State machine:  state(t+1) logic (combinatorial)
-        always @ (state, 
-                  rx_ftdi_rdy, 
-                  tx_ftdi_rdy, 
-                  tx_ready)
-        begin: next_state_logic
-	        /* Set a default state to avoid latches creation */
-	        next_state = state;
 
-            case (state)    
-                state_ready:
-                begin
-                    if (rx_ftdi_rdy)
-                        next_state = state_rx_ftdi_ready;
-                    else if (tx_ready)
-                    // Attention, potentially we could never fall in this if we keep having rx_ftdi_rdy!
-                        next_state = state_tx_me_ready;    
-                end
-                
-                state_rx_ftdi_ready:
-                begin
-                    if (rx_ftdi_rdy == 0)
-                        next_state = state_processing;
-                end
-                
-                state_processing:
-                begin
-                    if (tx_ready)
-                        next_state = state_tx_ready;
-                    else
-                        next_state = state_ready;
-                end
-                
-                state_tx_ready:
-                begin
-                        next_state = state_tx_me_ready;
-                end
-                
-                state_tx_me_ready:
-                begin
-                    if (tx_ftdi_rdy)
-                        next_state = state_tx_ftdi_ready;
-                end
-                                
-                state_tx_ftdi_ready:
-                begin
-                    if (tx_ftdi_rdy == 0)
-                    begin
-                        if (tx_ready)
-                        begin
-                            // More to transmit.
-                            next_state = state_tx_ready;
-                        end
-                        else
-                        begin
-                            // Nothing to transmit.
-                            next_state = state_ready;
-                        end
-                    end
-                end
-                
-                default:
-                    next_state = state_ready;  //something went wrong???
-            endcase
-        end
-        
-        
-        always @ (posedge in_clk, negedge in_reset_n)
-    	begin
-    		if(!in_reset_n)
-    		begin
-    			counter      <= 0;
-                state        <= state_ready;
-                tx_ready     <= 0;
-                rx_counter   <= 0;
-    		end
-    		else
-    		begin
-              counter  <= counter + 1;
-              // FSM state advancement logic.
-              state    <= next_state;
-              
-              // WHY FOR TX_READY NO LATCH IS GENERATED???
-              // I DONT SET IT IN ANY POSSIBLE CASES.
-              // MAYBE BECAUSE IT'S SEQUENTIAL LOGIC AND NOT COMBINATORIAL???
-              
-              if (state == state_ready && 
-                  next_state == state_rx_ftdi_ready)
-              begin
-                  // When entering this state, fetch data!
-                  case (rx_counter)
-                      0:
-                      begin
-                          rx_counter    <= rx_counter + 1;
-                          rx_buffer     <= data_rx;
-                      end
-                      
-                      1:
-                      begin
-                          rx_counter    <= rx_counter + 1;
-                          rx_buffer     <= data_rx;
-                      end
-                      
-                      2:
-                      begin
-                          rx_counter    <= rx_counter + 1;
-                          rx_buffer     <= data_rx;
-                      end
-                      
-                      3:
-                      begin
-                          rx_counter    <= rx_counter + 1;
-                          rx_buffer     <= data_rx;
-                      end
-                             
-                      default:
-                      begin
-                          rx_buffer     <= data_rx;
-                          rx_counter <= 0;
-                          tx_ready   <= 1;
-                          tx_counter <= 5;
-                      end
-                  endcase
-              end
-              else if (next_state == state_tx_ready)
-              begin
-                  if (tx_counter > 1)
-                  begin
-                      if (rx_buffer == 16'hAA)
-                      begin
-                          data_tx <= ~rx_buffer; 
-                      end
-                      else
-                      begin
-                          data_tx <= rx_buffer;
-                      end
-                      
-                      tx_counter <= tx_counter - 1;
-                  end
-                  else
-                  begin
-                      tx_ready   <= 0;
-                      tx_counter <= 0;
-                  end
-              end
-            end
-    	end
-
-        
-        /* FSM output calculation: combinatorial logic */
-        always @ (state)
-        begin
-            case (state)
-                state_ready:
-                begin
-                    rx_me_rdy  = 0;
-                    tx_me_rdy  = 0;
-                    rx_enabled = 1;
-                end
-            
-                state_rx_ftdi_ready:
-                begin
-                    rx_me_rdy  = 1;
-                    tx_me_rdy  = 0;
-                    rx_enabled = 0;
-                end
-            
-                state_processing:
-                begin
-                    rx_me_rdy  = 0;
-                    tx_me_rdy  = 0;
-                    rx_enabled = 0;    
-                end
-                
-                state_tx_ready:
-                begin
-                    rx_me_rdy  = 0;
-                    tx_me_rdy  = 0;
-                    rx_enabled = 0;
-                end
-                
-                state_tx_me_ready:
-                begin
-                    rx_me_rdy  = 0;
-                    tx_me_rdy  = 1;
-                    rx_enabled = 0;
-                end
-            
-                state_tx_ftdi_ready:
-                begin
-                    rx_me_rdy  = 0;
-                    tx_me_rdy  = 0;
-                    rx_enabled = 0;
-                end
-            
-                default:
-                begin
-                    rx_me_rdy  = 0;
-                    tx_me_rdy  = 0;
-                    rx_enabled = 0;
-                end
-            endcase    
-        end
-
-    ledon ledon(.clk    (in_clk),
+    comm_handler       comhndl (.in_clk                (clk_top_main),
+                                .in_rst                (in_reset_p),
+                                .in_data_rx            (data_rx),
+                                .in_data_rx_hsk_req    (data_rx_req),
+                                .out_data_rx_hsk_ack   (data_rx_ack),
+                                .out_data_tx           (data_tx), 
+                                .out_data_tx_hsk_req   (data_tx_req),
+                                .in_data_tx_hsk_ack    (data_tx_ack),
+                                .out_rx_enable         (rx_enabled));
+                        
+    ledon ledon(.clk    (clk_top_main),
     			.reset_n(in_reset_n),
     			.out    (out_led));
 

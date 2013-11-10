@@ -25,7 +25,7 @@
 module top_test;
 
 	// Inputs
-	reg in_clk;
+	reg sim_clk;
 	reg in_reset_n;
 	reg in_ftdi_rxf_n;
 	reg in_ftdi_txe_n;
@@ -52,7 +52,7 @@ module top_test;
 	 
 	// Instantiate the Unit Under Test (UUT)
 	top uut (
-		.in_clk(in_clk), 
+		.in_ext_osc(sim_clk), 
 		.in_reset_n(in_reset_n), 
 		.out_led(out_led), 
 		.io_ftdi_data(t_ftdi_io_data), 
@@ -66,7 +66,7 @@ module top_test;
 	initial begin
 		// Initialize Inputs
 		#0
-		in_clk = 0;
+		sim_clk = 0;
 		in_reset_n = 1;
 		in_ftdi_rxf_n = 1;
 		in_ftdi_txe_n = 1;
@@ -75,7 +75,7 @@ module top_test;
 		#10
 		in_reset_n = 0;
 		
-		#20
+		#50
 		in_reset_n = 1;
 
 		#100
@@ -93,7 +93,8 @@ module top_test;
 		// Add stimulus here 
 	end
 	
-	always #7.5 in_clk = !in_clk; 
+    //66MHz
+	always #7.5 sim_clk = !sim_clk; 
 	
 	/*
 	 always @ (posedge out_ftdi_rd_n)

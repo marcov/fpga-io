@@ -64,13 +64,13 @@ module ftdiController(in_clk,
     reg [2:0] state;
     reg [2:0] next_state;
 
-    localparam state_ready           = 3'd0,
-               state_rx_data_avlb    = 3'd1,
-               state_rx_data_hsk    = 3'd2,
-               state_tx_data_hsk     = 3'd3,
-               state_tx_data_rdy     = 3'd4,
-               state_tx_data_gnt     = 3'd5,
-               state_tx_data_hld     = 3'd6;
+    localparam state_ready           = 0,
+               state_rx_data_avlb    = 1,
+               state_rx_data_hsk     = 2,
+               state_tx_data_hsk     = 3,
+               state_tx_data_rdy     = 4,
+               state_tx_data_gnt     = 5,
+               state_tx_data_hld     = 6;
 
 ///////////
 // Timing definitions for FTDI reading/writing.
