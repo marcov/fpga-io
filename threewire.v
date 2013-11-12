@@ -107,7 +107,7 @@ module threewire(input in_clk,
                         begin
                             state <= state_completed;
                         end
-                        out_rd_data[io_bits_ctr] <= tw_wr_data;
+                        out_rd_data[io_bits_ctr] <= io_tw_data;
                     end
 
                     state_txing_wr_data:
