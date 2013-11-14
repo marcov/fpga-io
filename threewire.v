@@ -1,6 +1,6 @@
 module threewire(input in_clk,
                  input in_rst,
-                 input in_r_w,
+                 input in_mode_wr,
                  input [ADDR_BITS - 1:0] in_addr,
                  input [DATA_BITS - 1:0] in_wr_data,
                  output reg [DATA_BITS - 1:0] out_rd_data,
@@ -64,9 +64,11 @@ module threewire(input in_clk,
                     clk_enable    <= 0;
                     io_hiz_enable <= 0;
                 end
+                out_io_in_progress <= 0;
             end
             else
             begin
+                out_io_in_progress <= 1;
                 ctr_div <= ctr_div + 1;
                 
                 if (ctr_div == 2'b11)
@@ -80,7 +82,7 @@ module threewire(input in_clk,
                         state_txing_r_w:
                         begin
                             out_tw_cs <= 0;
-                            tw_wr_data  <= in_r_w;
+                            tw_wr_data  <= in_mode_wr;
                             state       <= state_txing_addr;
                             io_bits_ctr <= ADDR_BITS - 1;
                         end
@@ -93,7 +95,7 @@ module threewire(input in_clk,
                             end
                             else
                             begin
-                                if (in_r_w == 0)
+                                if (in_mode_wr == 0)
                                     state <= state_rcv_prepare;
                                 else
                                     state <= state_txing_wr_data;
