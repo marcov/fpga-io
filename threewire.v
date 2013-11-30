@@ -1,4 +1,22 @@
-module threewire(input in_clk,
+/* Threewire Master
+ *
+ * Signal description:
+ * in_clk     : main input clock.
+ * in_rst     : reset.
+ * in_addr    : address to be transmitted over 3w
+ * in_wr_data : data to be transmitted over 3w in a write operation.
+ * out_rd_data: data received from slave over 3w in a read operation.
+ * in_start : single clock cycle start of operation signal.
+ * out_io_in_progress: output signal, high when 3w operation is in progress.
+ * out_tw_clock: the 3w bus clock.
+ * out_tw_cs   : the 3w bus chip select.
+ * io_tw_data  : the 3w bus bi-direction io data line.
+ *
+ */
+module threewire #( parameter ADDR_BITS = 9,
+                    parameter DATA_BITS = 16
+                  ) 
+                (input in_clk,
                  input in_rst,
                  input in_mode_wr,
                  input [ADDR_BITS - 1:0] in_addr,
@@ -10,15 +28,12 @@ module threewire(input in_clk,
                  output reg out_tw_cs,
                  inout  io_tw_data);
     
-    parameter ADDR_BITS = 9;
-    parameter DATA_BITS = 16;
-    
+
     reg [1:0] ctr_div;
     reg [3:0] io_bits_ctr;
     reg clk_enable;
     reg io_hiz_enable;
     reg tw_wr_data;
-    
     
     reg [2:0]  state;
     localparam state_idle           = 0,
@@ -58,17 +73,17 @@ module threewire(input in_clk,
                 begin
                     state <= state_ready;
                     clk_enable <= 1;
+                    out_io_in_progress <= 1;
                 end
                 else
                 begin
                     clk_enable    <= 0;
                     io_hiz_enable <= 0;
+                    out_io_in_progress <= 0;
                 end
-                out_io_in_progress <= 0;
             end
             else
             begin
-                out_io_in_progress <= 1;
                 ctr_div <= ctr_div + 1;
                 
                 if (ctr_div == 2'b11)

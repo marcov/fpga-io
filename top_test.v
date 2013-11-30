@@ -119,7 +119,7 @@ module top_test;
 	always @ (posedge out_ftdi_rd_n)
     begin
         t_ftdi_emu_out_enable        <= 0;
-        t_ftdi_emu_tx_data <= t_ftdi_emu_tx_data + 1;
+        //t_ftdi_emu_tx_data <= t_ftdi_emu_tx_data + 1;
     end
 	 
 endmodule

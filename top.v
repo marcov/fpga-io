@@ -26,7 +26,10 @@ module top(
     input in_ftdi_rxf_n,
     input in_ftdi_txe_n,
     output out_ftdi_wr_n,
-    output out_ftdi_rd_n
+    output out_ftdi_rd_n,
+    output out_tw_clock,
+    output out_tw_cs,
+    inout  io_tw_data
     );
 
     // FTDI Wires for logic conversion to FTDI modules.
@@ -81,7 +84,10 @@ module top(
                                 .out_data_tx           (data_tx), 
                                 .out_data_tx_hsk_req   (data_tx_req),
                                 .in_data_tx_hsk_ack    (data_tx_ack),
-                                .out_rx_enable         (rx_enabled));
+                                .out_rx_enable         (rx_enabled),
+                                .out_tw_clock          (out_tw_clock),
+                                .out_tw_cs             (out_tw_cs),
+                                .io_tw_data            (io_tw_data));
                         
     ledon ledon(.clk    (clk_top_main),
     			.reset_n(in_reset_n),

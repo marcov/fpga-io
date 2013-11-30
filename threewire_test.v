@@ -17,18 +17,21 @@ module threewire_test;
     reg  [8:0] t_addr;
     reg  [15:0] t_data;
 
-    threewire iut_3w_master ( .in_clk(sim_clk),
-                       .in_rst(rst),
-                       .in_mode_wr(iut_mode_wr),
-                       .in_addr(iut_addr),
-                       .in_wr_data(iut_wr_data),
-                       .out_rd_data(iut_rd_data),
-                       .in_start(iut_start),
-                       .out_io_in_progress(active),
-                       .out_tw_clock(tw_bus_clock),
-                       .out_tw_cs(tw_bus_chipselect),
-                       .io_tw_data(tw_bus_data));
+    /* Threewire master: implementation under test */
+    threewire iut_3w_master ( 
+                .in_clk(sim_clk),
+                .in_rst(rst),
+                .in_mode_wr(iut_mode_wr),
+                .in_addr(iut_addr),
+                .in_wr_data(iut_wr_data),
+                .out_rd_data(iut_rd_data),
+                .in_start(iut_start),
+                .out_io_in_progress(active),
+                .out_tw_clock(tw_bus_clock),
+                .out_tw_cs(tw_bus_chipselect),
+                .io_tw_data(tw_bus_data));
     
+    /* Threewire slave: lower tester */
     tw_slave  lt_3w_slave(
                 .tw_bus_clock(tw_bus_clock),
                 .tw_bus_chipselect(tw_bus_chipselect),
@@ -80,7 +83,7 @@ module threewire_test;
         iut_start   = 1;
         iut_addr    = addr;
         iut_mode_wr = 0;
-        //since iut is reading, we have to feed the slave emulator with a value.
+        //since iut is reading, we have to feed the slave lt with a value.
         lt_slave_rd_data = data;
         
         wait(active); 

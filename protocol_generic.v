@@ -6,7 +6,10 @@ module comm_handler    (in_clk,
                         out_data_tx,
                         out_data_tx_hsk_req,
                         in_data_tx_hsk_ack,
-                        out_rx_enable);
+                        out_rx_enable,
+                        out_tw_clock,
+                        out_tw_cs,
+                        io_tw_data);
 
     // Module input/output
     input  in_clk;
@@ -21,7 +24,11 @@ module comm_handler    (in_clk,
     input in_data_tx_hsk_ack;
     // Generic
     output reg out_rx_enable;
-
+    // 3w signals
+    output out_tw_clock;
+    output out_tw_cs;
+    inout  io_tw_data;
+    
     // Synchronization with protocol decoder.
     reg rx_done;
     reg tx_done;
@@ -41,14 +48,17 @@ module comm_handler    (in_clk,
               
               
     ////////////////////////////////////////////////////
-    proto_generic protogen  (.in_clk   (in_clk),
+    pcl_3w_master pcl_3wm   (.in_clk   (in_clk),
                              .in_rst   (in_rst),
                              .data_rx  (in_data_rx),
                              .data_tx  (out_data_tx),
                              .rx_done  (rx_done),
                              .tx_done  (tx_done),
                              .rx_trig  (rx_continue),
-                             .tx_trig  (tx_continue));
+                             .tx_trig  (tx_continue),
+                             .out_tw_clock (out_tw_clock),
+                             .out_tw_cs    (out_tw_cs),
+                             .io_tw_data   (io_tw_data));
 
                            
     // State machine:  state(t+1) logic (combinatorial)
@@ -191,9 +201,11 @@ module comm_handler    (in_clk,
     end
 endmodule
 
-
-
-module proto_generic  (input  in_clk,
+////////////////////////////////////////////////////////////////////////////////////
+//
+// Decodes the messages from host for 3w R/W.
+//
+module pcl_3w_master  (input  in_clk,
                        input  in_rst,
                        input      [7:0] data_rx,
                        output reg [7:0] data_tx,
@@ -201,7 +213,9 @@ module proto_generic  (input  in_clk,
                        input  tx_done,
                        output reg rx_trig,
                        output reg tx_trig,
-                       output reg out_3w);
+                       output out_tw_clock,
+                       output out_tw_cs,
+                       inout  io_tw_data);
     /*
     // Protocol SM          
     localparam  state_proto_idle,
@@ -214,113 +228,192 @@ module proto_generic  (input  in_clk,
     */ 
     
     reg [2:0]   state;    
-    localparam  state_proto_idle      = 0,
-                state_proto_rcdv_cmd  = 1,  
-                state_proto_rcdv_data = 2,
-                state_proto_txing_ans = 3,
-                state_proto_tx_next   = 4;
+    localparam  state_proto_wait_cmd         = 0,
+                state_proto_wait_addr        = 1, 
+                state_proto_tw_started       = 2,
+                state_proto_wait_wrdata      = 3,
+                state_proto_wait_tw_complete = 4,
+                state_proto_tx_answer        = 5;
     
+  ////////////////////////////////////////////////////////// 
+
+    parameter THREEWIRE_ADDRESS_BITS = 9;
+    parameter THREEWIRE_DATA_BITS   = 16;
+
+    ////// TODO: calculate the byte values from bits values!
+    localparam ADDR_BYTES  = 2;
+    localparam DATA_BYTES  = 2;
+    
+  ////////////////////////////////////////////////////////// 
     reg [7:0] cmd;
-    reg [7:0] data;
-    reg [1:0] tx_size;
-    
-    /////////////////////////////////////////
+    localparam CMD_READ  = 8'h0,
+               CMD_WRITE = 8'h1,
+               CMD_OK    = 8'h2;
+
+  //////////////////////////////////////////////////////////
+    // Used to count the number of bytes received before changing state.
+    reg [DATA_BYTES - 1 : 0] rx_data_len;
+    reg [ADDR_BYTES - 1 : 0] rx_addr_len;
+    reg [DATA_BYTES - 1 : 0] tx_data_len;
+
+  ////////////////////////////////////////////////////////// 
+    reg tw_start;
+    reg tw_mode_rw;
+    wire [THREEWIRE_DATA_BITS - 1 : 0]   tw_rd_data;
+    reg [THREEWIRE_DATA_BITS - 1 : 0]    tw_wr_data;
+    reg [THREEWIRE_ADDRESS_BITS - 1 : 0] tw_address;
+
+    threewire #(.DATA_BITS(THREEWIRE_DATA_BITS),
+                .ADDR_BITS(THREEWIRE_ADDRESS_BITS))
+              tw_master(.in_clk (in_clk),
+                        .in_rst (in_rst),
+                        .in_mode_wr (tw_mode_rw),
+                        .in_addr(tw_address),
+                        .in_wr_data(tw_wr_data),
+                        .out_rd_data(tw_rd_data),
+                        .in_start(tw_start),
+                        .out_io_in_progress(tw_running),
+                        .out_tw_clock (out_tw_clock),
+                        .out_tw_cs    (out_tw_cs),
+                        .io_tw_data   (io_tw_data));
+   
+  ////////////////////////////////////////////////////////// 
     always @ (posedge in_clk, posedge in_rst)
     begin
         if (in_rst)
         begin
-            state <= state_proto_idle;
+            state <= state_proto_wait_cmd;
             rx_trig <= 0;
             tx_trig <= 0;
+            tw_start <= 0;
         end
         else
         begin
         
-            // Make trig high duration of 1 clock cycle.
+            // Make trig/start high duration of 1 clock cycle.
             if (tx_trig)
                 tx_trig <=0;
                 
             if (rx_trig)
                 rx_trig <=0;
             
+            if (tw_start)
+                tw_start <= 0;
+
             case (state)   
-                state_proto_idle:
+                state_proto_wait_cmd:
                 begin
                     if (rx_done)
                     begin
-                        cmd     <= data_rx;
-                        state   <= state_proto_rcdv_cmd;
+                        if (data_rx == CMD_READ ||
+                            data_rx == CMD_WRITE)
+                        begin
+                            tw_address  <= 0;
+                            tw_wr_data  <= 0;
+                            rx_addr_len <= ADDR_BYTES - 1;
+                            rx_data_len <= DATA_BYTES - 1;
+                            cmd     <= data_rx;
+                            state   <= state_proto_wait_addr;
+                        end
                         rx_trig <= 1;
                     end
                 end
                 
-                state_proto_rcdv_cmd:
+                state_proto_wait_addr:
                 begin
                     if (rx_done)
                     begin
-                        data    <= data_rx;
-                        state   <= state_proto_rcdv_data;
-                        // LAST BYTE WAS RECEIVED.
-                    end
-                end
-                
-                state_proto_rcdv_data:                
-                begin
-                    state   <= state_proto_txing_ans;
-                
-                    case (cmd)
-                        8'h00:
+                        tw_address <= tw_address | (data_rx << (rx_addr_len * 8));
+                        if (rx_addr_len > 0)
                         begin
-                            data_tx <= cmd;
-                            tx_trig <= 1;
-                            tx_size <= 1;
-                        end
-                    
-                        8'h01:
-                        begin
-                            data_tx <= data;
-                            tx_trig <= 1;
-                            tx_size <= 1;
-                            out_3w  <= 1;
-                        end
-                    
-                        default:
-                        begin
-                            data_tx <= cmd + data;
-                            tx_trig <= 1;
-                            tx_size <= 3;
-                        end
-                    endcase
-                end
-                
-                state_proto_txing_ans:
-                begin
-                    if (tx_size - 1 > 0)
-                    begin
-                        tx_size <= tx_size - 1;
-                        state <= state_proto_tx_next;
-                    end
-                    else
-                    begin
-                        if (tx_done)
-                        begin
-                            tx_size <= 0;
                             rx_trig <= 1;
-                            state   <= state_proto_idle;
+                            rx_addr_len <= rx_addr_len - 1;
+                        end
+                        else
+                        begin
+                            if (cmd == CMD_READ)
+                            begin
+                                // Start tw operation
+                                tw_mode_rw = 0;
+                                tw_start <= 1;
+                                state <= state_proto_tw_started;
+                            end
+                            else
+                            begin
+                                rx_trig <= 1;
+                                state   <= state_proto_wait_wrdata;
+                            end
                         end
                     end
                 end
                 
-                state_proto_tx_next:
+                state_proto_wait_wrdata:                
+                begin
+                    if (rx_done)
+                    begin
+                        tw_wr_data <= tw_wr_data | (data_rx << (rx_data_len * 8));
+                        if (rx_data_len > 0)
+                        begin
+                            rx_trig <= 1;
+                            rx_data_len <= rx_data_len - 1;
+                        end
+                        else
+                        begin
+                            // Start tw operation
+                            tw_mode_rw = 1;
+                            tw_start <= 1;
+                            state <= state_proto_tw_started;
+                        end
+                    end
+                end
+                
+                state_proto_tw_started:
+                begin
+                    if (tw_running)
+                    begin
+                        state <= state_proto_wait_tw_complete;
+                    end
+                end
+
+                state_proto_wait_tw_complete:
+                begin
+                    if (tw_running == 0)
+                    begin
+                        if (cmd == CMD_WRITE)
+                        begin
+                            // Just send an OK
+                            tx_data_len <= 0;
+                            data_tx <= CMD_OK;
+                            tx_trig <= 1;
+                        end
+                        else
+                        begin
+                            // Send the full data back.
+                            tx_data_len <= DATA_BYTES - 1;
+                            data_tx <= tw_rd_data >> ((DATA_BYTES - 1) * 8) ;
+                            tx_trig <= 1;
+                        end
+                        state <= state_proto_tx_answer;
+                    end
+                end
+
+                state_proto_tx_answer:
                 begin
                     if (tx_done)
                     begin
-                        data_tx <= tx_size;
-                        tx_trig <= 1;
-                        state   <= state_proto_txing_ans;
+                        if (tx_data_len > 0)
+                        begin
+                            tx_data_len  <= tx_data_len - 1;
+                            data_tx <= tw_rd_data >> ((tx_data_len - 1) * 8) ;
+                            tx_trig <= 1;
+                        end
+                        else
+                        begin
+                            rx_trig <= 1;
+                            state   <= state_proto_wait_cmd;
+                        end
                     end
                 end
-                
             endcase
         end
     end              
