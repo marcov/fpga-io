@@ -58,7 +58,10 @@ module ftdiController(in_clk,
     // RX handshake interlock request/acknowledge.
     output reg  out_rx_hsk_req;
     input  wire in_rx_hsk_ack;
-    
+   
+    // Buffer holding tx data.
+    reg [7:0] tx_data;
+
 //////////
 //  FSM
     reg [2:0] state;
@@ -108,7 +111,7 @@ module ftdiController(in_clk,
     
 ///////////
 // Bidirectional FTDI I/O handling.
-    assign io_ftdi_data = ftdi_output_enable ? in_tx_data : 8'bz;
+    assign io_ftdi_data = ftdi_output_enable ? tx_data : 8'bz;
     
 ///////////
 // FSM
@@ -133,7 +136,7 @@ module ftdiController(in_clk,
     begin: next_state_logic
         /* Set a default state to avoid latches creation */
         next_state = state;
-                
+
         case (state)
             // Ready to receive/transmit.
             state_ready :
@@ -224,6 +227,16 @@ module ftdiController(in_clk,
         else
         begin
             case (state)
+                state_ready:
+                begin
+                    if (next_state == state_tx_data_hsk)
+                    begin
+                        // Sample tx data here.
+                        tx_data = in_tx_data;
+                    end
+                    state <= next_state;
+                end
+
                 state_rx_data_avlb:
                 begin
                     token_priority    <= token_priority_tx;
@@ -243,7 +256,7 @@ module ftdiController(in_clk,
                         state         <= next_state;
                     end
                 end
-                
+
                 state_tx_data_gnt:
                 begin
                     token_priority    <= token_priority_rx;

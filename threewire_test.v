@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module threewire_test;
+module threewire_testbench;
 
     reg sim_clk;
     reg rst;
@@ -11,10 +11,11 @@ module threewire_test;
     reg  [15:0] iut_wr_data;
     wire [15:0] iut_rd_data;
     
-    wire [8:0]  lt_slave_addr;
-    reg  [15:0] lt_slave_rd_data; 
-    wire [15:0] lt_slave_wr_data;
-    reg  [8:0] t_addr;
+    wire [8:0]  lt_tw_slave_addr;
+    reg  [15:0] lt_tw_slave_rd_data;
+    wire [15:0] lt_tw_slave_wr_data;
+    wire        lt_tw_slave_mode_wr;
+    reg  [8:0]  t_addr;
     reg  [15:0] t_data;
 
     /* Threewire master: implementation under test */
@@ -36,9 +37,9 @@ module threewire_test;
                 .tw_bus_clock(tw_bus_clock),
                 .tw_bus_chipselect(tw_bus_chipselect),
                 .tw_bus_data(tw_bus_data),
-                .address(lt_slave_addr),
-                .wr_data(lt_slave_wr_data),
-                .rd_data(lt_slave_rd_data),
+                .address(lt_tw_slave_addr),
+                .wr_data(lt_tw_slave_wr_data),
+                .rd_data(lt_tw_slave_rd_data),
                 .mode_wr(lt_slave_mode_wr));
 
     initial begin
@@ -84,18 +85,18 @@ module threewire_test;
         iut_addr    = addr;
         iut_mode_wr = 0;
         //since iut is reading, we have to feed the slave lt with a value.
-        lt_slave_rd_data = data;
+        lt_tw_slave_rd_data = data;
         
         wait(active); 
         iut_start = 0;  
         wait(!active); 
-        if (lt_slave_rd_data != iut_rd_data ||
-            lt_slave_addr != iut_addr ||
+        if (lt_tw_slave_rd_data != iut_rd_data ||
+            lt_tw_slave_addr != iut_addr ||
             lt_slave_mode_wr != iut_mode_wr)
         begin
             $display(">>>> FAILED on RX");
-            $display(">>>> DATA IUT: %d LT : %d", lt_slave_rd_data, iut_rd_data);
-            $display(">>>> ADDR IUT: %d LT : %d", lt_slave_addr, iut_addr);
+            $display(">>>> DATA IUT: %d LT : %d", lt_tw_slave_rd_data, iut_rd_data);
+            $display(">>>> ADDR IUT: %d LT : %d", lt_tw_slave_addr, iut_addr);
             $display(">>>> MODE IUT: %b LT : %b", lt_slave_mode_wr, iut_mode_wr);
             $finish;
         end
@@ -115,13 +116,13 @@ module threewire_test;
         wait(active); 
         iut_start = 0;
         wait(!active); 
-        if (lt_slave_wr_data != iut_wr_data ||
-            lt_slave_addr != iut_addr ||
+        if (lt_tw_slave_wr_data != iut_wr_data ||
+            lt_tw_slave_addr != iut_addr ||
             lt_slave_mode_wr != iut_mode_wr)
         begin
             $display(">>>> FAILED on TX");
-            $display(">>>> DATA IUT: %b LT : %b", lt_slave_wr_data, iut_wr_data);
-            $display(">>>> ADDR IUT: %b LT : %b", lt_slave_addr, iut_addr);
+            $display(">>>> DATA IUT: %b LT : %b", lt_tw_slave_wr_data, iut_wr_data);
+            $display(">>>> ADDR IUT: %b LT : %b", lt_tw_slave_addr, iut_addr);
             $display(">>>> MODE IUT: %b LT : %b", lt_slave_mode_wr, iut_mode_wr);
             $finish;
         end

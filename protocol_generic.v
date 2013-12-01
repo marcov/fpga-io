@@ -216,16 +216,6 @@ module pcl_3w_master  (input  in_clk,
                        output out_tw_clock,
                        output out_tw_cs,
                        inout  io_tw_data);
-    /*
-    // Protocol SM          
-    localparam  state_proto_idle,
-                state_proto_rcdv_cmd,
-                state_proto_rcdv_addr0,
-                state_proto_rcdv_addr1,
-                state_proto_rcdv_data0,
-                state_proto_rcdv_data1,
-                state_proto_rcdv_txing;
-    */ 
     
     reg [2:0]   state;    
     localparam  state_proto_wait_cmd         = 0,
@@ -233,7 +223,8 @@ module pcl_3w_master  (input  in_clk,
                 state_proto_tw_started       = 2,
                 state_proto_wait_wrdata      = 3,
                 state_proto_wait_tw_complete = 4,
-                state_proto_tx_answer        = 5;
+                state_proto_tx_answer        = 5,
+                state_proto_wait_echo_char   = 6;
     
   ////////////////////////////////////////////////////////// 
 
@@ -248,7 +239,9 @@ module pcl_3w_master  (input  in_clk,
     reg [7:0] cmd;
     localparam CMD_READ  = 8'h0,
                CMD_WRITE = 8'h1,
-               CMD_OK    = 8'h2;
+               CMD_OK    = 8'h2,
+               CMD_ECHO  = 8'hAA,
+               CMD_PING  = 8'hFF;
 
   //////////////////////////////////////////////////////////
     // Used to count the number of bytes received before changing state.
@@ -278,6 +271,7 @@ module pcl_3w_master  (input  in_clk,
                         .io_tw_data   (io_tw_data));
    
   ////////////////////////////////////////////////////////// 
+  ////////////////////////////////////////////////////////// 
     always @ (posedge in_clk, posedge in_rst)
     begin
         if (in_rst)
@@ -305,17 +299,55 @@ module pcl_3w_master  (input  in_clk,
                 begin
                     if (rx_done)
                     begin
-                        if (data_rx == CMD_READ ||
-                            data_rx == CMD_WRITE)
-                        begin
-                            tw_address  <= 0;
-                            tw_wr_data  <= 0;
-                            rx_addr_len <= ADDR_BYTES - 1;
-                            rx_data_len <= DATA_BYTES - 1;
-                            cmd     <= data_rx;
-                            state   <= state_proto_wait_addr;
-                        end
-                        rx_trig <= 1;
+                        case (data_rx)
+                            CMD_READ:
+                            begin
+                                tw_address  <= 0;
+                                tw_wr_data  <= 0;
+                                rx_addr_len <= ADDR_BYTES - 1;
+                                rx_data_len <= DATA_BYTES - 1;
+                                cmd     <= data_rx;
+                                state   <= state_proto_wait_addr;
+                                //Continue RX
+                                rx_trig <= 1;
+                            end
+
+                            CMD_WRITE:
+                            begin
+                                tw_address  <= 0;
+                                tw_wr_data  <= 0;
+                                rx_addr_len <= ADDR_BYTES - 1;
+                                rx_data_len <= DATA_BYTES - 1;
+                                cmd     <= data_rx;
+                                state   <= state_proto_wait_addr;
+                                //Continue RX
+                                rx_trig <= 1;
+                            end
+                            
+                            CMD_PING:
+                            begin
+                                // Just send an OK
+                                tx_data_len <= 0;
+                                data_tx <= CMD_OK;
+                                tx_trig <= 1;
+
+                                state <= state_proto_tx_answer;
+                            end
+
+                            CMD_ECHO:
+                            begin
+                                state <= state_proto_wait_echo_char;
+                                
+                                //Continue RX
+                                rx_trig <= 1;
+                            end
+
+                            default:
+                            begin
+                                //Continue RX
+                                rx_trig <= 1;
+                            end
+                        endcase
                     end
                 end
                 
@@ -338,10 +370,17 @@ module pcl_3w_master  (input  in_clk,
                                 tw_start <= 1;
                                 state <= state_proto_tw_started;
                             end
-                            else
+                            else if (cmd == CMD_WRITE)
                             begin
                                 rx_trig <= 1;
                                 state   <= state_proto_wait_wrdata;
+                            end
+                            else
+                            begin
+                                // Should never happen!!!
+                                //Continue RX
+                                rx_trig <= 1;
+                                state <= state_proto_wait_cmd;
                             end
                         end
                     end
@@ -413,6 +452,16 @@ module pcl_3w_master  (input  in_clk,
                             state   <= state_proto_wait_cmd;
                         end
                     end
+                end
+
+                state_proto_wait_echo_char:
+                begin
+                    // Just send an OK
+                    tx_data_len <= 0;
+                    data_tx <= data_rx;
+                    tx_trig <= 1;
+
+                    state <= state_proto_tx_answer;
                 end
             endcase
         end
