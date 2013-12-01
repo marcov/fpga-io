@@ -76,7 +76,7 @@ module top(
                             .in_rx_hsk_ack        (data_rx_ack));
 
 
-    comm_handler       comhndl (.in_clk                (clk_top_main),
+   io_synchronizer    io_synch (.in_clk                (clk_top_main),
                                 .in_rst                (in_reset_p),
                                 .in_data_rx            (data_rx),
                                 .in_data_rx_hsk_req    (data_rx_req),

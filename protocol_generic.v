@@ -1,4 +1,4 @@
-module comm_handler    (in_clk,
+module io_synchronizer (in_clk,
                         in_rst,
                         in_data_rx,
                         in_data_rx_hsk_req,
@@ -201,6 +201,7 @@ module comm_handler    (in_clk,
     end
 endmodule
 
+
 ////////////////////////////////////////////////////////////////////////////////////
 //
 // Decodes the messages from host for 3w R/W.
@@ -231,10 +232,15 @@ module pcl_3w_master  (input  in_clk,
     parameter THREEWIRE_ADDRESS_BITS = 9;
     parameter THREEWIRE_DATA_BITS   = 16;
 
-    ////// TODO: calculate the byte values from bits values!
+    // BITS -> clog2 -> bytes -> clog2 -> bits needed for len.
+    
+    /// TODO: Why $clog2 cant be sythetized?????
     localparam ADDR_BYTES  = 2;
     localparam DATA_BYTES  = 2;
-    
+    // Max TX size is achieved when answering with a block of data.
+    localparam MAX_TX_SIZE_CLOG2   = 1;
+    localparam ADDRESS_BYTES_CLOG2 = 1; 
+
   ////////////////////////////////////////////////////////// 
     reg [7:0] cmd;
     localparam CMD_READ  = 8'h0,
@@ -245,10 +251,10 @@ module pcl_3w_master  (input  in_clk,
 
   //////////////////////////////////////////////////////////
     // Used to count the number of bytes received before changing state.
-    reg [DATA_BYTES - 1 : 0] rx_data_len;
-    reg [ADDR_BYTES - 1 : 0] rx_addr_len;
-    reg [DATA_BYTES - 1 : 0] tx_data_len;
+    reg [MAX_TX_SIZE_CLOG2 - 1 : 0] rx_data_len;
+    reg [MAX_TX_SIZE_CLOG2 - 1 : 0] tx_data_len;
 
+    reg [ADDRESS_BYTES_CLOG2 - 1 : 0] rx_addr_len;
   ////////////////////////////////////////////////////////// 
     reg tw_start;
     reg tw_mode_rw;

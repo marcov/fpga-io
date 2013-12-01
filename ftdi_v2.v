@@ -103,12 +103,6 @@ module ftdiController(in_clk,
 //   - T: when high, set OUTPUT buffer in three-state mode.
     reg ftdi_output_enable;
     
-//////////
-// Token for switching of priority RX/TX
-    localparam token_priority_rx = 1'd0,
-               token_priority_tx = 1'd1;
-    reg token_priority;
-    
 ///////////
 // Bidirectional FTDI I/O handling.
     assign io_ftdi_data = ftdi_output_enable ? tx_data : 8'bz;
@@ -131,8 +125,7 @@ module ftdiController(in_clk,
               in_rx_en, 
               in_ftdi_rxf, 
               in_tx_hsk_req,
-              in_rx_hsk_ack,
-              token_priority)
+              in_rx_hsk_ack)
     begin: next_state_logic
         /* Set a default state to avoid latches creation */
         next_state = state;
@@ -141,7 +134,6 @@ module ftdiController(in_clk,
             // Ready to receive/transmit.
             state_ready :
             begin
-                if (token_priority == token_priority_rx)
                 begin
                     if (in_rx_en && in_ftdi_rxf)
                     begin
@@ -150,17 +142,6 @@ module ftdiController(in_clk,
                     else if (in_tx_hsk_req)
                     begin
                         next_state = state_tx_data_hsk;
-                    end
-                end
-                else if (token_priority == token_priority_tx)
-                begin
-                    if (in_tx_hsk_req)
-                    begin
-                        next_state = state_tx_data_hsk;
-                    end
-                    else if (in_rx_en && in_ftdi_rxf)
-                    begin
-                       next_state = state_rx_data_avlb;
                     end
                 end
             end
@@ -222,7 +203,6 @@ module ftdiController(in_clk,
             state             <= state_ready;
             delay_counter     <= 0;
             out_rx_data       <= 0;
-            token_priority    <= token_priority_rx;
         end
         else
         begin
@@ -239,7 +219,6 @@ module ftdiController(in_clk,
 
                 state_rx_data_avlb:
                 begin
-                    token_priority    <= token_priority_tx;
                 
                     if (delay_counter < t4_rd_active)
                     begin
@@ -259,7 +238,6 @@ module ftdiController(in_clk,
 
                 state_tx_data_gnt:
                 begin
-                    token_priority    <= token_priority_rx;
                 
                     if (delay_counter < t8_data_to_wr)
                     begin
