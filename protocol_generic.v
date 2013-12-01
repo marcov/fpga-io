@@ -336,10 +336,10 @@ module pcl_3w_master  (input  in_clk,
 
                             CMD_ECHO:
                             begin
-                                state <= state_proto_wait_echo_char;
-                                
                                 //Continue RX
                                 rx_trig <= 1;
+                                
+                                state <= state_proto_wait_echo_char;
                             end
 
                             default:
@@ -456,12 +456,15 @@ module pcl_3w_master  (input  in_clk,
 
                 state_proto_wait_echo_char:
                 begin
-                    // Just send an OK
-                    tx_data_len <= 0;
-                    data_tx <= data_rx;
-                    tx_trig <= 1;
+                    if (rx_done)
+                    begin
+                        // Just send an OK
+                        tx_data_len <= 0;
+                        data_tx <= data_rx;
+                        tx_trig <= 1;
 
-                    state <= state_proto_tx_answer;
+                        state <= state_proto_tx_answer;
+                    end
                 end
             endcase
         end

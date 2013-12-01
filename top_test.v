@@ -141,8 +141,38 @@ module top_testbench;
         lt_ft2232h_usb_tx_start = 0;
         #1
         lt_ft2232h_usb_rx_start = 0;
-
         wait(lt_ft2232h_usb_rx_done);
+        
+        /// TEST PING.
+        lt_ft2232h_usb_tx_size = 1;
+        lt_ft2232h_usb_rx_size = 1;
+
+        lt_ft2232h_usb_tx_data [7:0]    = 8'hFF;
+        
+        lt_ft2232h_usb_tx_start = 1;
+        #1
+        lt_ft2232h_usb_rx_start = 1;
+        lt_ft2232h_usb_tx_start = 0;
+        #1
+        lt_ft2232h_usb_rx_start = 0;
+        wait(lt_ft2232h_usb_rx_done);
+        
+        /// TEST ECHO.
+        lt_ft2232h_usb_tx_size = 2;
+        lt_ft2232h_usb_rx_size = 1;
+
+        lt_ft2232h_usb_tx_data [7:0]    = 8'hAA;
+        lt_ft2232h_usb_tx_data [15:8]   = 8'hF1;
+        
+        lt_ft2232h_usb_tx_start = 1;
+        #1
+        lt_ft2232h_usb_rx_start = 1;
+        lt_ft2232h_usb_tx_start = 0;
+        #1
+        lt_ft2232h_usb_rx_start = 0;
+        wait(lt_ft2232h_usb_rx_done);
+        
+        
         lt_ft2232h_usb_rx_start = 1;
         #1
         lt_ft2232h_usb_rx_start = 0;
