@@ -75,20 +75,31 @@ module top(
                             .out_rx_hsk_req       (data_rx_req),
                             .in_rx_hsk_ack        (data_rx_ack));
 
+   io_synchronizer  io_synch (.in_clk                (clk_top_main),
+                              .in_rst                (in_reset_p),
+                              .in_data_rx_hsk_req    (data_rx_req),
+                              .out_data_rx_hsk_ack   (data_rx_ack),
+                              .out_data_tx_hsk_req   (data_tx_req),
+                              .in_data_tx_hsk_ack    (data_tx_ack),
+                              .out_rx_enable         (rx_enabled),
+                              .rx_done               (rx_done),
+                              .tx_done               (tx_done),
+                              .rx_continue           (rx_continue),
+                              .tx_continue           (tx_continue));
 
-   io_synchronizer    io_synch (.in_clk                (clk_top_main),
-                                .in_rst                (in_reset_p),
-                                .in_data_rx            (data_rx),
-                                .in_data_rx_hsk_req    (data_rx_req),
-                                .out_data_rx_hsk_ack   (data_rx_ack),
-                                .out_data_tx           (data_tx), 
-                                .out_data_tx_hsk_req   (data_tx_req),
-                                .in_data_tx_hsk_ack    (data_tx_ack),
-                                .out_rx_enable         (rx_enabled),
-                                .out_tw_clock          (out_tw_clock),
-                                .out_tw_cs             (out_tw_cs),
-                                .io_tw_data            (io_tw_data));
-                        
+    pcl_3w_master   pcl_3wm (.in_clk       (clk_top_main),
+                             .in_rst       (in_reset_p),
+                             .data_rx      (data_rx),
+                             .data_tx      (data_tx),
+                             .rx_done      (rx_done),
+                             .tx_done      (tx_done),
+                             .rx_trig      (rx_continue),
+                             .tx_trig      (tx_continue),
+                             .out_tw_clock (out_tw_clock),
+                             .out_tw_cs    (out_tw_cs),
+                             .io_tw_data   (io_tw_data));
+
+    
     ledon ledon(.clk    (clk_top_main),
     			.reset_n(in_reset_n),
     			.out    (out_led));
