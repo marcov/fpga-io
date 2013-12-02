@@ -17,3 +17,10 @@ function integer _max;
         else      _max = b;
     end
 endfunction
+
+function integer _cdiv;
+    input integer dividend, divider;
+    begin
+        _cdiv = (dividend / divider) + ((dividend % divider) ? 1 : 0);
+    end
+endfunction

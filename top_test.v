@@ -23,7 +23,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 module top_testbench;
-
 	// Inputs
 	reg sim_clk;
 	reg in_reset_n;
@@ -34,9 +33,22 @@ module top_testbench;
 	wire out_ftdi_rd_n;
     wire [7:0] io_ftdi_data;
     
+    // Include functions builtins redefinition for which XST is missing support.
+    `include "builtins_redefined.v"
+    
+    localparam TOP_TEST_3W_ADDRESS_BITS = 10;
+    localparam TOP_TEST_3W_DATA_BITS    = 32;
+    localparam TOP_TEST_3W_CLK_DIV_2N = 4;
+
+    
+    localparam TOP_TEST_3W_ADDR_BYTES  = _cdiv(TOP_TEST_3W_ADDRESS_BITS, 8);
+    localparam TOP_TEST_3W_DATA_BYTES  = _cdiv(TOP_TEST_3W_DATA_BITS, 8);
 ///////////////////////////////////////////////////////////////////
     // Instantiate the Implementation Under Test (IUT)
-	top iut_top (
+	top #(.TOP_3W_ADDRESS_BITS(TOP_TEST_3W_ADDRESS_BITS),
+          .TOP_3W_DATA_BITS   (TOP_TEST_3W_DATA_BITS),
+          .TOP_3W_CLK_DIV_2N  (TOP_TEST_3W_CLK_DIV_2N))
+        iut_top (
 		.in_ext_osc(sim_clk), 
 		.in_reset_n(in_reset_n), 
 		.out_led(out_led), 
@@ -78,13 +90,17 @@ module top_testbench;
                  .usb_rx_done (lt_ft2232h_usb_rx_done));
           
 ///////////////////////////////////////////////////////////////////
-    wire [8:0]  lt_tw_slave_addr;
-    reg  [15:0] lt_tw_slave_rd_data;
-    wire [15:0] lt_tw_slave_wr_data;
-    wire        lt_tw_slave_mode_wr;
 
+     
+    wire [TOP_TEST_3W_ADDRESS_BITS - 1 : 0] lt_tw_slave_addr;
+    reg  [TOP_TEST_3W_DATA_BITS - 1 : 0]    lt_tw_slave_rd_data;
+    wire [TOP_TEST_3W_DATA_BITS - 1 : 0]    lt_tw_slave_wr_data;
+    wire                                    lt_tw_slave_mode_wr;
+    
     /* Threewire slave: lower tester */
-    tw_slave lt_3w_slave (
+    tw_slave  #(.ADDR_BITS(TOP_TEST_3W_ADDRESS_BITS),
+                .DATA_BITS(TOP_TEST_3W_DATA_BITS))
+             lt_3w_slave(
                 .tw_bus_clock(tw_bus_clock),
                 .tw_bus_chipselect(tw_bus_chipselect),
                 .tw_bus_data(tw_bus_data),
@@ -96,6 +112,9 @@ module top_testbench;
 ///////////////////////////////////////////////////////////////////
     initial
      begin
+        $dumpfile("top_testbench.lxt");
+        $dumpvars(0, top_testbench);
+
 		// Initialize Inputs
 		#0
 		sim_clk = 0;
@@ -108,13 +127,13 @@ module top_testbench;
 		in_reset_n = 1;
 
         /// TEST READ.
-		lt_tw_slave_rd_data = 16'hAABB;
+		lt_tw_slave_rd_data = 'hAABBCCDD;
 
-        lt_ft2232h_usb_tx_size = 3;
-        lt_ft2232h_usb_rx_size = 2;
+        lt_ft2232h_usb_tx_size = 1 + TOP_TEST_3W_ADDR_BYTES;
+        lt_ft2232h_usb_rx_size = TOP_TEST_3W_DATA_BYTES;
 
         lt_ft2232h_usb_tx_data [7:0]   = 8'h00;
-        lt_ft2232h_usb_tx_data [15:8]  = 8'h01;
+        lt_ft2232h_usb_tx_data [15:8]  = 8'h03;
         lt_ft2232h_usb_tx_data [23:16] = 8'hBB;
         lt_ft2232h_usb_tx_start = 1;
         #1
@@ -125,7 +144,7 @@ module top_testbench;
         wait(lt_ft2232h_usb_rx_done);
 
         /// TEST WRITE.
-        lt_ft2232h_usb_tx_size = 5;
+        lt_ft2232h_usb_tx_size = 1 + TOP_TEST_3W_ADDR_BYTES + TOP_TEST_3W_DATA_BYTES;
         lt_ft2232h_usb_rx_size = 1;
 
         lt_ft2232h_usb_tx_data [7:0]    = 8'h01;
@@ -133,6 +152,8 @@ module top_testbench;
         lt_ft2232h_usb_tx_data [23:16]  = 8'hBB;
         lt_ft2232h_usb_tx_data [31:24]  = 8'hCC;
         lt_ft2232h_usb_tx_data [39:32]  = 8'hDD;
+        lt_ft2232h_usb_tx_data [47:40]  = 8'hEE;
+        lt_ft2232h_usb_tx_data [55:48]  = 8'hFF;
         
         lt_ft2232h_usb_tx_start = 1;
         #1

@@ -2,7 +2,10 @@
 //
 // Decodes the messages from host for 3w R/W.
 //
-module pcl_3w_master  (input  in_clk,
+module pcl_3w_master #(parameter THREEWIRE_ADDRESS_BITS = 10,
+                       parameter THREEWIRE_DATA_BITS    = 32,
+                       parameter THREEWIRE_CLK_DIV_2N   = 4)
+                      (input  in_clk,
                        input  in_rst,
                        input      [7:0] data_rx,
                        output reg [7:0] data_tx,
@@ -14,6 +17,9 @@ module pcl_3w_master  (input  in_clk,
                        output out_tw_cs,
                        inout  io_tw_data);
     
+    // Include functions builtins redefinition for which XST is missing support.
+    `include "builtins_redefined.v"
+    
     reg [2:0]   state;    
     localparam  state_proto_wait_cmd         = 0,
                 state_proto_wait_addr        = 1, 
@@ -24,18 +30,10 @@ module pcl_3w_master  (input  in_clk,
                 state_proto_wait_echo_char   = 6;
     
   ////////////////////////////////////////////////////////// 
-
-    parameter THREEWIRE_ADDRESS_BITS = 9;
-    parameter THREEWIRE_DATA_BITS   = 16;
-
-    // BITS -> clog2 -> bytes -> clog2 -> bits needed for len.
+    // BITS -> /8 -> bytes -> clog2 -> bits needed for len.
     
-    /// TODO: Why $clog2 cant be sythetized?????
-    localparam ADDR_BYTES  = 2;
-    localparam DATA_BYTES  = 2;
-    // Max TX size is achieved when answering with a block of data.
-    localparam MAX_TX_SIZE_CLOG2   = 1;
-    localparam ADDRESS_BYTES_CLOG2 = 1; 
+    localparam ADDR_BYTES  = _cdiv(THREEWIRE_ADDRESS_BITS, 8);
+    localparam DATA_BYTES  = _cdiv(THREEWIRE_DATA_BITS, 8);
 
   ////////////////////////////////////////////////////////// 
     reg [7:0] cmd;
@@ -47,19 +45,21 @@ module pcl_3w_master  (input  in_clk,
 
   //////////////////////////////////////////////////////////
     // Used to count the number of bytes received before changing state.
-    reg [MAX_TX_SIZE_CLOG2 - 1 : 0] rx_data_len;
-    reg [MAX_TX_SIZE_CLOG2 - 1 : 0] tx_data_len;
+    // Max TX size is achieved when answering with a block of data.
+    reg [_clog2(DATA_BYTES) - 1 : 0] rx_data_len;
+    reg [_clog2(DATA_BYTES) - 1 : 0] tx_data_len;
 
-    reg [ADDRESS_BYTES_CLOG2 - 1 : 0] rx_addr_len;
+    reg [_clog2(ADDR_BYTES) - 1 : 0] rx_addr_len;
   ////////////////////////////////////////////////////////// 
     reg tw_start;
     reg tw_mode_rw;
-    wire [THREEWIRE_DATA_BITS - 1 : 0]   tw_rd_data;
+    wire[THREEWIRE_DATA_BITS - 1 : 0]    tw_rd_data;
     reg [THREEWIRE_DATA_BITS - 1 : 0]    tw_wr_data;
     reg [THREEWIRE_ADDRESS_BITS - 1 : 0] tw_address;
 
-    threewire #(.DATA_BITS(THREEWIRE_DATA_BITS),
-                .ADDR_BITS(THREEWIRE_ADDRESS_BITS))
+    threewire #(.ADDR_BITS(THREEWIRE_ADDRESS_BITS),
+                .DATA_BITS(THREEWIRE_DATA_BITS),
+                .CLK_DIV_2N(THREEWIRE_CLK_DIV_2N))
               tw_master(.in_clk (in_clk),
                         .in_rst (in_rst),
                         .in_mode_wr (tw_mode_rw),

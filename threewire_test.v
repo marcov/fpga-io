@@ -6,20 +6,27 @@ module threewire_testbench;
     reg rst;
     reg iut_start;
     reg iut_mode_wr;
+   
+    parameter IUT_3W_ADDR_BITS  = 10;
+    parameter IUT_3W_DATA_BITS  = 32;
+    parameter IUT_3W_CLK_DIV_2N = 4;
+     
+    reg  [IUT_3W_ADDR_BITS - 1 : 0]  iut_addr;
+    reg  [IUT_3W_DATA_BITS - 1 : 0] iut_wr_data;
+    wire [IUT_3W_DATA_BITS - 1 : 0] iut_rd_data;
     
-    reg  [8:0]  iut_addr;
-    reg  [15:0] iut_wr_data;
-    wire [15:0] iut_rd_data;
-    
-    wire [8:0]  lt_tw_slave_addr;
-    reg  [15:0] lt_tw_slave_rd_data;
-    wire [15:0] lt_tw_slave_wr_data;
+    wire [IUT_3W_ADDR_BITS - 1 : 0]  lt_tw_slave_addr;
+    reg  [IUT_3W_DATA_BITS - 1 : 0] lt_tw_slave_rd_data;
+    wire [IUT_3W_DATA_BITS - 1 : 0] lt_tw_slave_wr_data;
     wire        lt_tw_slave_mode_wr;
-    reg  [8:0]  t_addr;
-    reg  [15:0] t_data;
+    reg  [IUT_3W_ADDR_BITS - 1 : 0]  t_addr;
+    reg  [IUT_3W_DATA_BITS - 1 : 0] t_data;
 
     /* Threewire master: implementation under test */
-    threewire iut_3w_master ( 
+    threewire #(.ADDR_BITS(IUT_3W_ADDR_BITS),
+                .DATA_BITS(IUT_3W_DATA_BITS),
+                .CLK_DIV_2N(IUT_3W_CLK_DIV_2N))
+            iut_3w_master ( 
                 .in_clk(sim_clk),
                 .in_rst(rst),
                 .in_mode_wr(iut_mode_wr),
@@ -33,7 +40,9 @@ module threewire_testbench;
                 .io_tw_data(tw_bus_data));
     
     /* Threewire slave: lower tester */
-    tw_slave  lt_3w_slave(
+    tw_slave  #(.ADDR_BITS(IUT_3W_ADDR_BITS),
+                .DATA_BITS(IUT_3W_DATA_BITS))
+             lt_3w_slave(
                 .tw_bus_clock(tw_bus_clock),
                 .tw_bus_chipselect(tw_bus_chipselect),
                 .tw_bus_data(tw_bus_data),
@@ -45,7 +54,7 @@ module threewire_testbench;
     initial begin
         #0
         $dumpfile("test.lxt");
-        $dumpvars(0,threewire_test);
+        $dumpvars(0,threewire_testbench);
         sim_clk = 0;
         rst = 0;
         iut_start = 0;
@@ -55,20 +64,24 @@ module threewire_testbench;
         rst = 1;
         #25
         rst = 0;
-
-        t_data = 0;
-        t_addr = 0;
+        
+        t_data = 'b0;
+        t_addr = 'b0;
         TestRead(t_addr, t_data);
         TestWrite(t_addr, t_data);
 
+        t_data = 32'hFFFFFFFF;
+        t_addr = 10'h3FF;
+        TestRead(t_addr, t_data);
+        TestWrite(t_addr, t_data);
 
-        t_data = 16'h3d;
-        t_addr = 9'h3;
+        t_data = 32'hAABBCCDD;
+        t_addr = 10'h333;
         TestRead(t_addr, t_data);
         TestWrite(t_addr, t_data);
         
-        t_data = 16'h49;
-        t_addr = 9'h4e;
+        t_data = 32'h00112233;
+        t_addr = 10'h2AA;
         TestRead(t_addr, t_data);
         TestWrite(t_addr, t_data);
         //////////////////////////
@@ -77,8 +90,8 @@ module threewire_testbench;
     end
 
     task TestRead;
-        input [8:0]  addr;
-        input [15:0] data;
+        input [IUT_3W_ADDR_BITS -1 : 0] addr;
+        input [IUT_3W_DATA_BITS -1 : 0] data;
     begin
         ///////// TEST READ //////
         iut_start   = 1;
@@ -104,8 +117,8 @@ module threewire_testbench;
     endtask
 
     task TestWrite;
-        input [8:0]  addr;
-        input [15:0] data;
+        input [IUT_3W_ADDR_BITS -1 : 0] addr;
+        input [IUT_3W_DATA_BITS -1 : 0] data;
     begin
         ///////// TEST WRITE //////
         iut_start   = 1;
@@ -135,7 +148,9 @@ module threewire_testbench;
 endmodule
 
 
-module tw_slave(tw_bus_clock,
+module tw_slave #( parameter ADDR_BITS = 10,
+                   parameter DATA_BITS = 32)
+               (tw_bus_clock,
                 tw_bus_chipselect,
                 tw_bus_data,
                 address,
@@ -143,8 +158,6 @@ module tw_slave(tw_bus_clock,
                 rd_data,
                 mode_wr);
 
-    parameter ADDR_BITS = 9;
-    parameter DATA_BITS = 16;
     
     input tw_bus_clock;
     input tw_bus_chipselect;

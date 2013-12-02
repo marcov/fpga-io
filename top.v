@@ -18,8 +18,11 @@
 // Additional Comments: 
 //
 ////////////////////////////////////////////////////////////////////////////////
-module top(
-    input in_ext_osc,
+module top
+  #(parameter TOP_3W_ADDRESS_BITS = 10,
+    parameter TOP_3W_DATA_BITS    = 32,
+    parameter TOP_3W_CLK_DIV_2N   = 4)
+   (input in_ext_osc,
     input in_reset_n,
     output out_led,
     inout [7:0] io_ftdi_data,
@@ -87,7 +90,10 @@ module top(
                               .rx_continue           (rx_continue),
                               .tx_continue           (tx_continue));
 
-    pcl_3w_master   pcl_3wm (.in_clk       (clk_top_main),
+    pcl_3w_master   #(.THREEWIRE_ADDRESS_BITS(TOP_3W_ADDRESS_BITS),
+                      .THREEWIRE_DATA_BITS(TOP_3W_DATA_BITS),
+                      .THREEWIRE_CLK_DIV_2N(TOP_3W_CLK_DIV_2N))
+                    pcl_3wm (.in_clk       (clk_top_main),
                              .in_rst       (in_reset_p),
                              .data_rx      (data_rx),
                              .data_tx      (data_tx),
@@ -101,7 +107,7 @@ module top(
 
     
     ledon ledon(.clk    (clk_top_main),
-    			.reset_n(in_reset_n),
-    			.out    (out_led));
+                .reset_n(in_reset_n),
+                .led_out    (out_led));
 
 endmodule

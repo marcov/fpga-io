@@ -30,8 +30,9 @@ module ftdi_testbench;
 
 	// Outputs
     reg rx_enabled;
-    reg [7:0]  data_rx;
+    wire [7:0]  data_rx;
     wire [7:0] data_tx;
+    wire [7:0] io_ftdi_data;
     wire rx_req;
     reg  rx_ack;
     reg  tx_req;
