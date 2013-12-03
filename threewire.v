@@ -14,15 +14,16 @@
  *
  */
 
-module threewire #(parameter ADDR_BITS  = 10,
-                   parameter DATA_BITS  = 32,
-                   parameter CLK_DIV_2N = 4) 
+module threewire_master_ctrl #(
+                   parameter TWM_ADDRESS_BITS  = 10,
+                   parameter TWM_DATA_BITS  = 32,
+                   parameter TWM_CLK_DIV_2N = 4) 
                   (input in_clk,
                    input in_rst,
                    input in_mode_wr,
-                   input [ADDR_BITS - 1:0] in_addr,
-                   input [DATA_BITS - 1:0] in_wr_data,
-                   output reg [DATA_BITS - 1:0] out_rd_data,
+                   input [TWM_ADDRESS_BITS - 1:0] in_addr,
+                   input [TWM_DATA_BITS - 1:0] in_wr_data,
+                   output reg [TWM_DATA_BITS - 1:0] out_rd_data,
                    input in_start,
                    output reg out_io_in_progress,
                    output out_tw_clock,
@@ -33,8 +34,8 @@ module threewire #(parameter ADDR_BITS  = 10,
     `include "builtins_redefined.v"
 
 
-    reg [_clog2(CLK_DIV_2N) - 1 : 0] clk_div_ctr;
-    reg [_clog2(_max(ADDR_BITS, DATA_BITS)) - 1 : 0] io_bits_ctr;
+    reg [_clog2(TWM_CLK_DIV_2N) - 1 : 0] clk_div_ctr;
+    reg [_clog2(_max(TWM_ADDRESS_BITS, TWM_DATA_BITS)) - 1 : 0] io_bits_ctr;
     //reg clk_enable;
     reg io_hiz_enable;
     reg tw_wr_data;
@@ -50,9 +51,9 @@ module threewire #(parameter ADDR_BITS  = 10,
                state_completed      = 7;
 
     assign io_tw_data = io_hiz_enable ? 1'bz : tw_wr_data;
-    //assign out_tw_clock = clk_enable    ? clk_div_ctr[_clog2(CLK_DIV_2N) - 1] : 1'b0; 
+    //assign out_tw_clock = clk_enable    ? clk_div_ctr[_clog2(TWM_CLK_DIV_2N) - 1] : 1'b0; 
     /* Keep clock always active */
-    assign out_tw_clock = clk_div_ctr[_clog2(CLK_DIV_2N) - 1];
+    assign out_tw_clock = clk_div_ctr[_clog2(TWM_CLK_DIV_2N) - 1];
     
     always @ (posedge in_clk, posedge in_rst)
     begin
@@ -92,7 +93,7 @@ module threewire #(parameter ADDR_BITS  = 10,
             end
             else
             begin
-                if (clk_div_ctr == (CLK_DIV_2N - 1))
+                if (clk_div_ctr == (TWM_CLK_DIV_2N - 1))
                 begin
                     case (state)
                         state_ready:
@@ -105,7 +106,7 @@ module threewire #(parameter ADDR_BITS  = 10,
                             out_tw_cs <= 0;
                             tw_wr_data  <= in_mode_wr;
                             state       <= state_txing_addr;
-                            io_bits_ctr <= ADDR_BITS - 1;
+                            io_bits_ctr <= TWM_ADDRESS_BITS - 1;
                         end
                         
                         state_txing_addr:
@@ -121,7 +122,7 @@ module threewire #(parameter ADDR_BITS  = 10,
                                 else
                                     state <= state_txing_wr_data;
                                 //setting io_bits_ctr for the rd/write data state 
-                                io_bits_ctr <= DATA_BITS - 1;
+                                io_bits_ctr <= TWM_DATA_BITS - 1;
                             end
                             tw_wr_data  <= in_addr[io_bits_ctr];
                         end

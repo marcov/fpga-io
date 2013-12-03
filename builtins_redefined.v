@@ -1,5 +1,11 @@
 
 /* clog2 redefinition for XST */
+`ifdef __IVERILOG__
+//WIP
+`define _clog2 $clog2
+`define _max   $max
+
+`else
 function integer _clog2;
     input integer value;
     begin
@@ -24,3 +30,5 @@ function integer _cdiv;
         _cdiv = (dividend / divider) + ((dividend % divider) ? 1 : 0);
     end
 endfunction
+`endif
+

@@ -18,10 +18,13 @@
 // Additional Comments: 
 //
 ////////////////////////////////////////////////////////////////////////////////
+
+`include "project_config.v"
+
 module top
-  #(parameter TOP_3W_ADDRESS_BITS = 10,
-    parameter TOP_3W_DATA_BITS    = 32,
-    parameter TOP_3W_CLK_DIV_2N   = 4)
+  #(parameter TOP_3W_ADDRESS_BITS = `THREEWIRE_DATA_BITS,
+    parameter TOP_3W_DATA_BITS    = `THREEWIRE_ADDRESS_BITS,
+    parameter TOP_3W_CLK_DIV_2N   = `THREEWIRE_CLK_DIV_2N)
    (input in_ext_osc,
     input in_reset_n,
     output out_led,
@@ -90,9 +93,9 @@ module top
                               .rx_continue           (rx_continue),
                               .tx_continue           (tx_continue));
 
-    pcl_3w_master   #(.THREEWIRE_ADDRESS_BITS(TOP_3W_ADDRESS_BITS),
-                      .THREEWIRE_DATA_BITS(TOP_3W_DATA_BITS),
-                      .THREEWIRE_CLK_DIV_2N(TOP_3W_CLK_DIV_2N))
+    pcl_3w_master   #(.PCL_3WM_ADDRESS_BITS(TOP_3W_ADDRESS_BITS),
+                      .PCL_3WM_DATA_BITS(TOP_3W_DATA_BITS),
+                      .PCL_3WM_CLK_DIV_2N(TOP_3W_CLK_DIV_2N))
                     pcl_3wm (.in_clk       (clk_top_main),
                              .in_rst       (in_reset_p),
                              .data_rx      (data_rx),

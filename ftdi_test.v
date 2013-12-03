@@ -82,7 +82,7 @@ module ftdi_testbench;
     wire lt_ft2232h_usb_rx_done;
 
     /* FT2232H: lower tester */
-    ft2232h_device #(.FIFO_SIZE(FT2232H_FIFO_SIZE))
+    ft2232h_device #(.FT2232H_FIFO_SIZE(FT2232H_FIFO_SIZE))
             lt_ft2232h (
                  .in_rd_n (out_ftdi_rd_n),
                  .in_wr_n (out_ftdi_wr_n),
@@ -121,16 +121,16 @@ endmodule
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //
-module ft2232h_device #(parameter FIFO_SIZE = 128)
+module ft2232h_device #(parameter FT2232H_FIFO_SIZE = 128)
                      (input in_rd_n,
                       input in_wr_n,
                       output reg out_txe_n,
                       output reg out_rxf_n,
                       inout  [7:0] io_data,
-                      input  [(FIFO_SIZE * 8) - 1 : 0] usb_tx_data,
-                      output reg  [(FIFO_SIZE * 8) - 1 : 0] usb_rx_data,
-                      input  [$clog2(FIFO_SIZE) - 1 : 0]     usb_tx_size,
-                      input [$clog2(FIFO_SIZE) - 1 : 0]      usb_rx_size,
+                      input  [(FT2232H_FIFO_SIZE * 8) - 1 : 0] usb_tx_data,
+                      output reg  [(FT2232H_FIFO_SIZE * 8) - 1 : 0] usb_rx_data,
+                      input  [$clog2(FT2232H_FIFO_SIZE) - 1 : 0]     usb_tx_size,
+                      input [$clog2(FT2232H_FIFO_SIZE) - 1 : 0]      usb_rx_size,
                       input  usb_tx_start,
                       input  usb_rx_start,
                       output reg  usb_rx_done);
@@ -146,8 +146,8 @@ module ft2232h_device #(parameter FIFO_SIZE = 128)
     reg usb_tx_in_progress;
     reg usb_rx_in_progress;
 
-    reg [$clog2(FIFO_SIZE) - 1 : 0] usb_tx_counter;
-    reg [$clog2(FIFO_SIZE) - 1 : 0] usb_rx_counter;
+    reg [$clog2(FT2232H_FIFO_SIZE) - 1 : 0] usb_tx_counter;
+    reg [$clog2(FT2232H_FIFO_SIZE) - 1 : 0] usb_rx_counter;
 
     // HERE we are emulating the FT2332H!
 	always 

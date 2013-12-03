@@ -2,9 +2,9 @@
 //
 // Decodes the messages from host for 3w R/W.
 //
-module pcl_3w_master #(parameter THREEWIRE_ADDRESS_BITS = 10,
-                       parameter THREEWIRE_DATA_BITS    = 32,
-                       parameter THREEWIRE_CLK_DIV_2N   = 4)
+module pcl_3w_master #(parameter PCL_3WM_ADDRESS_BITS = 10,
+                       parameter PCL_3WM_DATA_BITS    = 32,
+                       parameter PCL_3WM_CLK_DIV_2N   = 4)
                       (input  in_clk,
                        input  in_rst,
                        input      [7:0] data_rx,
@@ -32,34 +32,35 @@ module pcl_3w_master #(parameter THREEWIRE_ADDRESS_BITS = 10,
   ////////////////////////////////////////////////////////// 
     // BITS -> /8 -> bytes -> clog2 -> bits needed for len.
     
-    localparam ADDR_BYTES  = _cdiv(THREEWIRE_ADDRESS_BITS, 8);
-    localparam DATA_BYTES  = _cdiv(THREEWIRE_DATA_BITS, 8);
+    localparam PCL_3W_ADDRESS_BYTES = _cdiv(PCL_3WM_ADDRESS_BITS, 8);
+    localparam PCL_3W_DATA_BYTES = _cdiv(PCL_3WM_DATA_BITS, 8);
 
   ////////////////////////////////////////////////////////// 
     reg [7:0] cmd;
     localparam CMD_READ  = 8'h0,
                CMD_WRITE = 8'h1,
                CMD_OK    = 8'h2,
-               CMD_ECHO  = 8'hAA,
-               CMD_PING  = 8'hFF;
+               CMD_ECHO  = 8'h03,
+               CMD_PING  = 8'h04;
 
   //////////////////////////////////////////////////////////
     // Used to count the number of bytes received before changing state.
     // Max TX size is achieved when answering with a block of data.
-    reg [_clog2(DATA_BYTES) - 1 : 0] rx_data_len;
-    reg [_clog2(DATA_BYTES) - 1 : 0] tx_data_len;
+    reg [_clog2(PCL_3W_DATA_BYTES) - 1 : 0] rx_data_len;
+    reg [_clog2(PCL_3W_DATA_BYTES) - 1 : 0] tx_data_len;
 
-    reg [_clog2(ADDR_BYTES) - 1 : 0] rx_addr_len;
+    reg [_clog2(PCL_3W_ADDRESS_BYTES) - 1 : 0] rx_addr_len;
   ////////////////////////////////////////////////////////// 
     reg tw_start;
     reg tw_mode_rw;
-    wire[THREEWIRE_DATA_BITS - 1 : 0]    tw_rd_data;
-    reg [THREEWIRE_DATA_BITS - 1 : 0]    tw_wr_data;
-    reg [THREEWIRE_ADDRESS_BITS - 1 : 0] tw_address;
+    wire[PCL_3WM_DATA_BITS - 1 : 0]    tw_rd_data;
+    reg [PCL_3WM_DATA_BITS - 1 : 0]    tw_wr_data;
+    reg [PCL_3WM_ADDRESS_BITS - 1 : 0] tw_address;
 
-    threewire #(.ADDR_BITS(THREEWIRE_ADDRESS_BITS),
-                .DATA_BITS(THREEWIRE_DATA_BITS),
-                .CLK_DIV_2N(THREEWIRE_CLK_DIV_2N))
+    threewire_master_ctrl #(
+                .TWM_ADDRESS_BITS(PCL_3WM_ADDRESS_BITS),
+                .TWM_DATA_BITS(PCL_3WM_DATA_BITS),
+                .TWM_CLK_DIV_2N(PCL_3WM_CLK_DIV_2N))
               tw_master(.in_clk (in_clk),
                         .in_rst (in_rst),
                         .in_mode_wr (tw_mode_rw),
@@ -106,8 +107,8 @@ module pcl_3w_master #(parameter THREEWIRE_ADDRESS_BITS = 10,
                             begin
                                 tw_address  <= 0;
                                 tw_wr_data  <= 0;
-                                rx_addr_len <= ADDR_BYTES - 1;
-                                rx_data_len <= DATA_BYTES - 1;
+                                rx_addr_len <= PCL_3W_ADDRESS_BYTES - 1;
+                                rx_data_len <= PCL_3W_DATA_BYTES - 1;
                                 cmd     <= data_rx;
                                 state   <= state_proto_wait_addr;
                                 //Continue RX
@@ -118,8 +119,8 @@ module pcl_3w_master #(parameter THREEWIRE_ADDRESS_BITS = 10,
                             begin
                                 tw_address  <= 0;
                                 tw_wr_data  <= 0;
-                                rx_addr_len <= ADDR_BYTES - 1;
-                                rx_data_len <= DATA_BYTES - 1;
+                                rx_addr_len <= PCL_3W_ADDRESS_BYTES - 1;
+                                rx_data_len <= PCL_3W_DATA_BYTES - 1;
                                 cmd     <= data_rx;
                                 state   <= state_proto_wait_addr;
                                 //Continue RX
@@ -230,8 +231,8 @@ module pcl_3w_master #(parameter THREEWIRE_ADDRESS_BITS = 10,
                         else
                         begin
                             // Send the full data back.
-                            tx_data_len <= DATA_BYTES - 1;
-                            data_tx <= tw_rd_data >> ((DATA_BYTES - 1) * 8) ;
+                            tx_data_len <= PCL_3W_DATA_BYTES - 1;
+                            data_tx <= tw_rd_data >> ((PCL_3W_DATA_BYTES - 1) * 8) ;
                             tx_trig <= 1;
                         end
                         state <= state_proto_tx_answer;

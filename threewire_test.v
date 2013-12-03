@@ -11,7 +11,7 @@ module threewire_testbench;
     parameter IUT_3W_DATA_BITS  = 32;
     parameter IUT_3W_CLK_DIV_2N = 4;
      
-    reg  [IUT_3W_ADDR_BITS - 1 : 0]  iut_addr;
+    reg  [IUT_3W_ADDR_BITS - 1 : 0] iut_addr;
     reg  [IUT_3W_DATA_BITS - 1 : 0] iut_wr_data;
     wire [IUT_3W_DATA_BITS - 1 : 0] iut_rd_data;
     
@@ -23,9 +23,10 @@ module threewire_testbench;
     reg  [IUT_3W_DATA_BITS - 1 : 0] t_data;
 
     /* Threewire master: implementation under test */
-    threewire #(.ADDR_BITS(IUT_3W_ADDR_BITS),
-                .DATA_BITS(IUT_3W_DATA_BITS),
-                .CLK_DIV_2N(IUT_3W_CLK_DIV_2N))
+    threewire_master_ctrl #(
+                .TWM_ADDRESS_BITS(IUT_3W_ADDR_BITS),
+                .TWM_DATA_BITS(IUT_3W_DATA_BITS),
+                .TWM_CLK_DIV_2N(IUT_3W_CLK_DIV_2N))
             iut_3w_master ( 
                 .in_clk(sim_clk),
                 .in_rst(rst),
@@ -40,8 +41,8 @@ module threewire_testbench;
                 .io_tw_data(tw_bus_data));
     
     /* Threewire slave: lower tester */
-    tw_slave  #(.ADDR_BITS(IUT_3W_ADDR_BITS),
-                .DATA_BITS(IUT_3W_DATA_BITS))
+    tw_slave  #(.TWS_ADDRESS_BITS(IUT_3W_ADDR_BITS),
+                .TWS_DATA_BITS(IUT_3W_DATA_BITS))
              lt_3w_slave(
                 .tw_bus_clock(tw_bus_clock),
                 .tw_bus_chipselect(tw_bus_chipselect),
@@ -65,31 +66,31 @@ module threewire_testbench;
         #25
         rst = 0;
         
-        t_data = 'b0;
-        t_addr = 'b0;
-        TestRead(t_addr, t_data);
-        TestWrite(t_addr, t_data);
+        t_data = 'h0;
+        t_addr = 'h0;
+        Iut_3wm_Read(t_addr, t_data);
+        Iut_3wm_Write(t_addr, t_data);
 
         t_data = 32'hFFFFFFFF;
         t_addr = 10'h3FF;
-        TestRead(t_addr, t_data);
-        TestWrite(t_addr, t_data);
+        Iut_3wm_Read(t_addr, t_data);
+        Iut_3wm_Write(t_addr, t_data);
 
         t_data = 32'hAABBCCDD;
         t_addr = 10'h333;
-        TestRead(t_addr, t_data);
-        TestWrite(t_addr, t_data);
+        Iut_3wm_Read(t_addr, t_data);
+        Iut_3wm_Write(t_addr, t_data);
         
         t_data = 32'h00112233;
         t_addr = 10'h2AA;
-        TestRead(t_addr, t_data);
-        TestWrite(t_addr, t_data);
+        Iut_3wm_Read(t_addr, t_data);
+        Iut_3wm_Write(t_addr, t_data);
         //////////////////////////
         #100000
         $finish;
     end
 
-    task TestRead;
+    task Iut_3wm_Read;
         input [IUT_3W_ADDR_BITS -1 : 0] addr;
         input [IUT_3W_DATA_BITS -1 : 0] data;
     begin
@@ -108,15 +109,15 @@ module threewire_testbench;
             lt_slave_mode_wr != iut_mode_wr)
         begin
             $display(">>>> FAILED on RX");
-            $display(">>>> DATA IUT: %d LT : %d", lt_tw_slave_rd_data, iut_rd_data);
-            $display(">>>> ADDR IUT: %d LT : %d", lt_tw_slave_addr, iut_addr);
+            $display(">>>> DATA IUT: %x LT : %x", lt_tw_slave_rd_data, iut_rd_data);
+            $display(">>>> ADDR IUT: %x LT : %x", lt_tw_slave_addr, iut_addr);
             $display(">>>> MODE IUT: %b LT : %b", lt_slave_mode_wr, iut_mode_wr);
             $finish;
         end
     end
     endtask
 
-    task TestWrite;
+    task Iut_3wm_Write;
         input [IUT_3W_ADDR_BITS -1 : 0] addr;
         input [IUT_3W_DATA_BITS -1 : 0] data;
     begin
@@ -134,8 +135,8 @@ module threewire_testbench;
             lt_slave_mode_wr != iut_mode_wr)
         begin
             $display(">>>> FAILED on TX");
-            $display(">>>> DATA IUT: %b LT : %b", lt_tw_slave_wr_data, iut_wr_data);
-            $display(">>>> ADDR IUT: %b LT : %b", lt_tw_slave_addr, iut_addr);
+            $display(">>>> DATA IUT: %x LT : %x", lt_tw_slave_wr_data, iut_wr_data);
+            $display(">>>> ADDR IUT: %x LT : %x", lt_tw_slave_addr, iut_addr);
             $display(">>>> MODE IUT: %b LT : %b", lt_slave_mode_wr, iut_mode_wr);
             $finish;
         end
@@ -148,8 +149,8 @@ module threewire_testbench;
 endmodule
 
 
-module tw_slave #( parameter ADDR_BITS = 10,
-                   parameter DATA_BITS = 32)
+module tw_slave #( parameter TWS_ADDRESS_BITS = 10,
+                   parameter TWS_DATA_BITS = 32)
                (tw_bus_clock,
                 tw_bus_chipselect,
                 tw_bus_data,
@@ -157,16 +158,16 @@ module tw_slave #( parameter ADDR_BITS = 10,
                 wr_data,
                 rd_data,
                 mode_wr);
-
     
     input tw_bus_clock;
     input tw_bus_chipselect;
     inout tw_bus_data;
     output reg mode_wr; //from master point of view
-    output reg [ADDR_BITS - 1 : 0] address;
-    output reg [DATA_BITS - 1 : 0] wr_data;
-    input  [DATA_BITS - 1 : 0] rd_data;
+    output reg [TWS_ADDRESS_BITS - 1 : 0] address;
+    output reg [TWS_DATA_BITS - 1 : 0] wr_data;
+    input  [TWS_DATA_BITS - 1 : 0] rd_data;
     
+    //reg [$clog2($max(TWS_ADDRESS_BITS, TWS_DATA_BITS)) - 1 : 0] i;
     reg [127 : 0] i;
     wire tw_slave_data_in;
     reg  tw_slave_data_out;
@@ -187,25 +188,25 @@ module tw_slave #( parameter ADDR_BITS = 10,
         
         @(posedge tw_bus_clock) mode_wr = tw_slave_data_in;
             
-        for (i = 0; i < ADDR_BITS; i = i + 1)
+        for (i = 0; i < TWS_ADDRESS_BITS; i = i + 1)
         begin
-            @(posedge tw_bus_clock) address[ADDR_BITS - 1 - i] = tw_slave_data_in; 
+            @(posedge tw_bus_clock) address[TWS_ADDRESS_BITS - 1 - i] = tw_slave_data_in; 
         end
 
         if (mode_wr)
         begin
             // Master is writing some data. 
-            for (i = 0; i < DATA_BITS; i = i + 1)
+            for (i = 0; i < TWS_DATA_BITS; i = i + 1)
             begin
-                @(posedge tw_bus_clock) wr_data[DATA_BITS - 1 - i] = tw_slave_data_in; 
+                @(posedge tw_bus_clock) wr_data[TWS_DATA_BITS - 1 - i] = tw_slave_data_in; 
             end
         end
         else
         begin
             // Master is reading some data.
-            for (i = 0; i < DATA_BITS; i = i + 1)
+            for (i = 0; i < TWS_DATA_BITS; i = i + 1)
             begin
-                @(posedge tw_bus_clock)  tw_slave_data_out =  rd_data[DATA_BITS - 1 - i];
+                @(posedge tw_bus_clock)  tw_slave_data_out =  rd_data[TWS_DATA_BITS - 1 - i];
                 if (i == 0)
                     tw_slave_out_enable = 1;
             end
