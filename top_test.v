@@ -61,7 +61,8 @@ module top_testbench;
 		.out_ftdi_rd_n(out_ftdi_rd_n),
         .out_tw_clock (tw_bus_clock),
         .out_tw_cs    (tw_bus_chipselect),
-        .io_tw_data   (tw_bus_data)
+        .io_tw_data   (tw_bus_data),
+        .out_tw_dir   (tw_bus_dir)
 	);
 
 ///////////////////////////////////////////////////////////////////

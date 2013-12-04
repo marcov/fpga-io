@@ -40,4 +40,5 @@ NET  "*_ftdi_*"        IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;
 NET "out_tw_clock" LOC = D13 | SLEW = FAST | DRIVE = 4;
 NET "out_tw_cs"    LOC = C13 | SLEW = FAST | DRIVE = 4;
 NET "io_tw_data"   LOC = D11 | SLEW = FAST | DRIVE = 4;
-NET "*_tw_*"       IOSTANDARD = LVCMOS18 | SUSPEND = 3STATE_PULLUP;
+NET "out_tw_dir"   LOC = D9 | SLEW = FAST | DRIVE = 4;
+NET "*_tw_*"       IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;

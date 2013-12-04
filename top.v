@@ -22,8 +22,8 @@
 `include "project_config.v"
 
 module top
-  #(parameter TOP_3W_ADDRESS_BITS = `THREEWIRE_DATA_BITS,
-    parameter TOP_3W_DATA_BITS    = `THREEWIRE_ADDRESS_BITS,
+  #(parameter TOP_3W_ADDRESS_BITS = `THREEWIRE_ADDRESS_BITS,
+    parameter TOP_3W_DATA_BITS    = `THREEWIRE_DATA_BITS,
     parameter TOP_3W_CLK_DIV_2N   = `THREEWIRE_CLK_DIV_2N)
    (input in_ext_osc,
     input in_reset_n,
@@ -35,7 +35,8 @@ module top
     output out_ftdi_rd_n,
     output out_tw_clock,
     output out_tw_cs,
-    inout  io_tw_data
+    inout  io_tw_data,
+    output out_tw_dir
     );
 
     // FTDI Wires for logic conversion to FTDI modules.
@@ -106,7 +107,8 @@ module top
                              .tx_trig      (tx_continue),
                              .out_tw_clock (out_tw_clock),
                              .out_tw_cs    (out_tw_cs),
-                             .io_tw_data   (io_tw_data));
+                             .io_tw_data   (io_tw_data),
+                             .out_tw_dir   (out_tw_dir));
 
     
     ledon ledon(.clk    (clk_top_main),

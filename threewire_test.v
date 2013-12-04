@@ -38,7 +38,8 @@ module threewire_testbench;
                 .out_io_in_progress(active),
                 .out_tw_clock(tw_bus_clock),
                 .out_tw_cs(tw_bus_chipselect),
-                .io_tw_data(tw_bus_data));
+                .io_tw_data(tw_bus_data),
+                .out_tw_dir(tw_bus_dir));
     
     /* Threewire slave: lower tester */
     tw_slave  #(.TWS_ADDRESS_BITS(IUT_3W_ADDR_BITS),
