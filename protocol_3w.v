@@ -15,7 +15,8 @@ module pcl_3w_master #(parameter PCL_3WM_ADDRESS_BITS = 10,
                        output reg tx_trig,
                        output out_tw_clock,
                        output out_tw_cs,
-                       inout  io_tw_data);
+                       inout  io_tw_data,
+                       output out_tw_dir);
     
     // Include functions builtins redefinition for which XST is missing support.
     `include "builtins_redefined.v"
@@ -71,7 +72,8 @@ module pcl_3w_master #(parameter PCL_3WM_ADDRESS_BITS = 10,
                         .out_io_in_progress(tw_running),
                         .out_tw_clock (out_tw_clock),
                         .out_tw_cs    (out_tw_cs),
-                        .io_tw_data   (io_tw_data));
+                        .io_tw_data   (io_tw_data),
+                        .out_tw_dir   (out_tw_dir));
    
   ////////////////////////////////////////////////////////// 
   ////////////////////////////////////////////////////////// 

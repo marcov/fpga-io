@@ -28,7 +28,8 @@ module threewire_master_ctrl #(
                    output reg out_io_in_progress,
                    output out_tw_clock,
                    output reg out_tw_cs,
-                   inout  io_tw_data);
+                   inout  io_tw_data,
+                   output out_tw_dir);
 
     // Include functions builtins redefinition for which XST is missing support.
     `include "builtins_redefined.v"
@@ -55,6 +56,9 @@ module threewire_master_ctrl #(
     /* Keep clock always active */
     assign out_tw_clock = clk_div_ctr[_clog2(TWM_CLK_DIV_2N) - 1];
     
+    // DIR = 0 means we are TXING (Schmitt-trigger inverted on board)
+    assign out_tw_dir = io_hiz_enable;
+
     always @ (posedge in_clk, posedge in_rst)
     begin
         if (in_rst)
