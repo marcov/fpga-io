@@ -4,8 +4,10 @@
 //WIP
 `define _clog2 $clog2
 `define _max   $max
+`define _cdiv(dividend,divisor)  ((dividend / divider) + ((dividend % divider) ? 1 : 0))
 
 `else
+
 function integer _clog2;
     input integer value;
     begin

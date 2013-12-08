@@ -111,8 +111,12 @@ module top
                              .out_tw_dir   (out_tw_dir));
 
     
-    ledon ledon(.clk    (clk_top_main),
-                .reset_n(in_reset_n),
-                .led_out    (out_led));
+    //ledon ledon(.clk    (clk_top_main),
+    //            .reset_n(in_reset_n),
+    //            .led_out    (out_led));
 
+
+    led_ctrl ledhb     (.in_clk(clk_top_main),
+                        .in_rst(in_reset_p),
+                        .out_led(out_led));
 endmodule
