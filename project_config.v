@@ -3,6 +3,9 @@
  * Global project configuration
  *
  */
+
+`undef   THREEWIRE_HAS_BURST
+
 `ifdef   THREEWIRE_FOR_FM
 `define  THREEWIRE_DATA_BITS        16 
 `define  THREEWIRE_ADDRESS_BITS     9 

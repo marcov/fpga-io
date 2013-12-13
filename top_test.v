@@ -191,21 +191,25 @@ module top_testbench;
         
         Iut_Top_3w_Read('h01AA, 0, 'hDEADBEEF);
         $display("====================================================");
+`ifdef THREEWIRE_HAS_BURST
         Iut_Top_3w_Read('h01BB, 1, 'hDEADBEEF);
         $display("====================================================");
         Iut_Top_3w_Read('h00CC, 2, 'hDEADBEEF);
         $display("====================================================");
         Iut_Top_3w_Read('h01DD, 3, 'hDEADBEEF);
         $display("====================================================");
-        
+`endif
+
         Iut_Top_3w_Write('h01BB, 0, 'hBEEFDEAD);
         $display("====================================================");
+`ifdef THREEWIRE_HAS_BURST
         Iut_Top_3w_Write('h01FF, 1, 'hBEEFDEAD);
         $display("====================================================");
         Iut_Top_3w_Write('h0100, 2, 'hBEEFDEAD);
         $display("====================================================");
         Iut_Top_3w_Write('h0080, 3, 'hBEEFDEAD);
         $display("====================================================");
+`endif
         
         Iut_Top_3w_Ping();
         $display("====================================================");
