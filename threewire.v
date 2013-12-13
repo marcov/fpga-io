@@ -35,8 +35,8 @@ module threewire_master_ctrl #(
     `include "builtins_redefined.v"
 
 
-    reg [_clog2(TWM_CLK_DIV_2N) - 1 : 0] clk_div_ctr;
-    reg [_clog2(_max(TWM_ADDRESS_BITS, TWM_DATA_BITS)) - 1 : 0] io_bits_ctr;
+    reg [`_clog2(TWM_CLK_DIV_2N) - 1 : 0] clk_div_ctr;
+    reg [`_clog2(`_max(TWM_ADDRESS_BITS, TWM_DATA_BITS)) - 1 : 0] io_bits_ctr;
     //reg clk_enable;
     reg io_hiz_enable;
     reg tw_wr_data;
@@ -54,7 +54,7 @@ module threewire_master_ctrl #(
     assign io_tw_data = io_hiz_enable ? 1'bz : tw_wr_data;
     //assign out_tw_clock = clk_enable    ? clk_div_ctr[_clog2(TWM_CLK_DIV_2N) - 1] : 1'b0; 
     /* Keep clock always active */
-    assign out_tw_clock = clk_div_ctr[_clog2(TWM_CLK_DIV_2N) - 1];
+    assign out_tw_clock = clk_div_ctr[`_clog2(TWM_CLK_DIV_2N) - 1];
     
     // DIR = 0 means we are TXING (Schmitt-trigger inverted on board)
     assign out_tw_dir = io_hiz_enable;
@@ -64,13 +64,13 @@ module threewire_master_ctrl #(
         if (in_rst)
         begin
             clk_div_ctr   <= 'd0;
-            io_hiz_enable <= 'd0;
+            io_hiz_enable <= 'b0;
             //clk_enable    <= 'd0;
             out_tw_cs     <= 'd1;
             tw_wr_data    <= 'd0;
-            io_bits_ctr   <= 'd0;
+            io_bits_ctr   <= 'b0;
             state <=      state_idle;
-            out_io_in_progress <= 'd0;
+            out_io_in_progress <= 'b0;
         end
         else
         begin
@@ -91,8 +91,8 @@ module threewire_master_ctrl #(
                 else
                 begin
                     //clk_enable    <= 0;
-                    io_hiz_enable <= 0;
-                    out_io_in_progress <= 0;
+                    io_hiz_enable <= 'b0;
+                    out_io_in_progress <= 'b0;
                 end
             end
             else
@@ -107,7 +107,7 @@ module threewire_master_ctrl #(
                         
                         state_txing_r_w:
                         begin
-                            out_tw_cs <= 0;
+                            out_tw_cs <= 'b0;
                             tw_wr_data  <= in_mode_wr;
                             state       <= state_txing_addr;
                             io_bits_ctr <= TWM_ADDRESS_BITS - 1;
@@ -124,7 +124,10 @@ module threewire_master_ctrl #(
                                 if (in_mode_wr == 0)
                                     state <= state_rcv_prepare;
                                 else
+                                begin
                                     state <= state_txing_wr_data;
+                                end
+
                                 //setting io_bits_ctr for the rd/write data state 
                                 io_bits_ctr <= TWM_DATA_BITS - 1;
                             end
@@ -135,14 +138,16 @@ module threewire_master_ctrl #(
                         state_rcv_prepare:
                         begin
                             state         <= state_rcving_rd_data;
-                            io_hiz_enable <= 1;
+                            io_hiz_enable <= 'b1;
                         end
 
 
                         state_rcving_rd_data:
                         begin
                             if (io_bits_ctr > 0)
+                            begin
                                 io_bits_ctr <= io_bits_ctr - 1;
+                            end
                             else
                                 state <= state_completed;
                             
@@ -162,7 +167,7 @@ module threewire_master_ctrl #(
                         state_completed:
                         begin
                             state     <= state_idle;
-                            out_tw_cs <= 1;
+                            out_tw_cs <= 'b1;
                         end
 
                         default:

@@ -5,24 +5,15 @@ module clockgen(CLKIN_IN,
                 CLKIN_IBUFG_OUT, 
                 CLK0_OUT);
 
-    input CLKIN_IN;
-    input RST_IN;
+   input CLKIN_IN;
+   input RST_IN;
    output CLKDV_OUT;
    output CLKIN_IBUFG_OUT;
    output CLK0_OUT;
 
-always @ (*)
-begin
-    if (RST_IN)
-    begin
-        CLK0_OUT = 0;
-    end
-    else
-    begin
-        CLK0_OUT = CLKIN_IN;
-    end
-end
+   assign CLK0_OUT = RST_IN ? 0 : CLKIN_IN;
 endmodule
+
 
 
 

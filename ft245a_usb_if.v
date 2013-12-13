@@ -4,7 +4,7 @@
 // 
 // Create Date:    23:06:02 10/08/2013 
 // Design Name: 
-// Module Name:    ftdiController 
+// Module Name:     
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
@@ -17,7 +17,8 @@
 // Additional Comments: 
 //
 ////////////////////////////////////////////////////////////////////////////////
-module ftdiController(in_clk,
+module ft245_asynch_ctrl(
+                      in_clk,
                       in_rst,
                       in_ftdi_txe, 
                       in_ftdi_rxf,

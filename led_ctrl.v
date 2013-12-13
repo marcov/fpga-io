@@ -10,7 +10,7 @@ module led_ctrl(input  in_clk,
     // Given the clock freq at 66.666MHz, I have to count to 133 333 333
     localparam IN_CLK_FREQ = 66666666;
     localparam PERIOD_S    = 2;
-    localparam CLKDIV_WIDTH = _clog2((IN_CLK_FREQ * PERIOD_S) / (1<<ROM_LUT_ADDR_WIDTH));
+    localparam CLKDIV_WIDTH = `_clog2((IN_CLK_FREQ * PERIOD_S) / (1<<ROM_LUT_ADDR_WIDTH));
 
     reg [CLKDIV_WIDTH - 1 : 0] clkdiv_ctr;
     wire pwm_clk;

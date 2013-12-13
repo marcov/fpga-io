@@ -66,8 +66,8 @@ module top
     wire [7:0] data_rx;
     wire [7:0] data_tx;
     
-    // Instantiation of ftdiController module.
-    ftdiController  ftdicon(.in_clk               (clk_top_main),
+    ft245_asynch_ctrl ftdicon(
+                            .in_clk               (clk_top_main),
                             .in_rst               (in_reset_p),
                             .in_ftdi_txe          (in_ftdi_txe_p), 
                             .in_ftdi_rxf          (in_ftdi_rxf_p),

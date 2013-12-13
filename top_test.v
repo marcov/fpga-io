@@ -43,8 +43,8 @@ module top_testbench;
     localparam TOP_TEST_3W_CLK_DIV_2N = `THREEWIRE_CLK_DIV_2N;
 
     
-    localparam TOP_TEST_3W_ADDR_BYTES  = _cdiv(TOP_TEST_3W_ADDRESS_BITS, 8);
-    localparam TOP_TEST_3W_DATA_BYTES  = _cdiv(TOP_TEST_3W_DATA_BITS, 8);
+    localparam TOP_TEST_3W_ADDR_BYTES  = `_cdiv(TOP_TEST_3W_ADDRESS_BITS, 8);
+    localparam TOP_TEST_3W_DATA_BYTES  = `_cdiv(TOP_TEST_3W_DATA_BITS, 8);
 ///////////////////////////////////////////////////////////////////
     // Instantiate the Implementation Under Test (IUT)
 	top #(.TOP_3W_ADDRESS_BITS(TOP_TEST_3W_ADDRESS_BITS),
@@ -67,10 +67,8 @@ module top_testbench;
 
 ///////////////////////////////////////////////////////////////////
     localparam FT2232H_BUFFER_SIZE = 128;
-    localparam BUFFERS_WIDTH = _clog2(FT2232H_BUFFER_SIZE);
+    localparam BUFFERS_WIDTH = `_clog2(FT2232H_BUFFER_SIZE);
 
-    reg [(FT2232H_BUFFER_SIZE * 8) - 1 : 0]  lt_ft2232h_usb_tx_data;
-    wire [(FT2232H_BUFFER_SIZE * 8) - 1 : 0] lt_ft2232h_usb_rx_data;
     reg [BUFFERS_WIDTH - 1 : 0] lt_ft2232h_usb_tx_size;
     reg [BUFFERS_WIDTH - 1 : 0] lt_ft2232h_usb_rx_size;
     reg lt_ft2232h_usb_tx_start;
@@ -188,41 +186,100 @@ module top_testbench;
        
         /////////////////////////////////////
         //
-        Iut_Top_3w_Read('h01AA);
-
-        Iut_Top_3w_Write('h01BB, 'hEFBEADDE);
+        //
+        $display("================ SIMULATION STARTED ================");
+        
+        Iut_Top_3w_Read('h01AA, 0, 'hDEADBEEF);
+        $display("====================================================");
+        Iut_Top_3w_Read('h01BB, 1, 'hDEADBEEF);
+        $display("====================================================");
+        Iut_Top_3w_Read('h00CC, 2, 'hDEADBEEF);
+        $display("====================================================");
+        Iut_Top_3w_Read('h01DD, 3, 'hDEADBEEF);
+        $display("====================================================");
+        
+        Iut_Top_3w_Write('h01BB, 0, 'hBEEFDEAD);
+        $display("====================================================");
+        Iut_Top_3w_Write('h01FF, 1, 'hBEEFDEAD);
+        $display("====================================================");
+        Iut_Top_3w_Write('h0100, 2, 'hBEEFDEAD);
+        $display("====================================================");
+        Iut_Top_3w_Write('h0080, 3, 'hBEEFDEAD);
+        $display("====================================================");
         
         Iut_Top_3w_Ping();
+        $display("====================================================");
        
         Iut_Top_3w_Echo('hAA);
+        $display("====================================================");
         
         ////////////////////////////////////
         lt_ft2232h_usb_rx_start = 1;
         #1
         lt_ft2232h_usb_rx_start = 0;
-        // Wait 100 ns for global reset to finish
-		#10000;
+
+        $display("=============== SIMULATION FINISHED ================");
+		#1000000;
+        $finish;
      end
 
-     
+    task dump_usb_tx;
+    begin : dump
+        integer i;
+        $write(">>>> USB TX size=%d : ", lt_ft2232h_usb_tx_size);
+        for (i = 0; i < lt_ft2232h_usb_tx_size; i = i + 1)
+        begin
+            $write("%x ", txbuffer_ram.data_RAM[i]);
+        end
+        $display("");
+    end
+    endtask
+
+    task dump_usb_rx;
+    begin : dump
+        integer i;
+        $write(">>>> USB RX size=%d : ", lt_ft2232h_usb_rx_size);
+        for (i = 0; i < lt_ft2232h_usb_rx_size; i = i + 1)
+        begin
+            $write("%x ", rxbuffer_ram.data_RAM[i]);
+        end
+        $display("");
+    end
+    endtask
+
     task Iut_Top_3w_Read;
         input [TOP_TEST_3W_ADDRESS_BITS - 1 : 0] address;
+        input [5 - 1 : 0] burst_size;
+        input [TOP_TEST_3W_DATA_BITS - 1 : 0]    lt_rd_data;
     begin : read_proc
         integer i;
-        lt_tw_slave_rd_data = 'hAABBCCDD;
+        integer j;
+        integer addr_offset;
+
+        addr_offset = 1 + (burst_size > 0 ? 1 : 0);
+        lt_tw_slave_rd_data = lt_rd_data & ((1 << TOP_TEST_3W_DATA_BITS) - 1) ;
+        address = address & ((1 << TOP_TEST_3W_ADDRESS_BITS) - 1) ;
         
-        lt_ft2232h_usb_tx_size = 1 + TOP_TEST_3W_ADDR_BYTES;
-        lt_ft2232h_usb_rx_size = TOP_TEST_3W_DATA_BYTES;
+        lt_ft2232h_usb_tx_size = addr_offset + TOP_TEST_3W_ADDR_BYTES;
+        lt_ft2232h_usb_rx_size = (1 + burst_size) * TOP_TEST_3W_DATA_BYTES;
 
         // write like a boss.
-        txbuffer_ram.data_RAM[0] = iut_top.pcl_3wm.CMD_READ;
-       
+        txbuffer_ram.data_RAM[0] = (burst_size > 0 ? 8'h80 : 8'h00) | iut_top.pcl_3wm.CMD_READ;
+      
+        if (burst_size > 0)
+        begin
+            txbuffer_ram.data_RAM[1] = burst_size;
+        end
+        
         //send big endian mode
         for (i = 0; i < TOP_TEST_3W_ADDR_BYTES; i= i + 1)
         begin
-            txbuffer_ram.data_RAM[i + 1] = 
+            txbuffer_ram.data_RAM[i + addr_offset] = 
                 address >> ((TOP_TEST_3W_ADDR_BYTES - 1 - i) * 8);
         end
+        
+        $display(">>>> TX CMD 3W RD BURST=%d", burst_size);
+        dump_usb_tx();
 
         lt_ft2232h_usb_tx_start = 1;
         #1
@@ -231,33 +288,83 @@ module top_testbench;
         #1
         lt_ft2232h_usb_rx_start = 0;
         wait(lt_ft2232h_usb_rx_done);
+        
+        $display(">>>> LT RD DATA: %x", lt_tw_slave_rd_data);
+        dump_usb_rx(); 
+       
+        
+        if (lt_slave_mode_wr != 0 || address != lt_tw_slave_addr)
+        begin
+            $display(">>>> FAILED on USB-3W-RD");
+            $display(">>>> ADDR IUT: %x LT : %x", address, lt_tw_slave_addr);
+            $display(">>>> MODE LT : %b", lt_slave_mode_wr);
+        end
+
+        for (j = 0; j <= burst_size; j = j + 1)
+        begin
+            for (i = 0; i < TOP_TEST_3W_DATA_BYTES; i = i + 1)
+            begin : rx_byte_check
+                reg [7:0] rxbyte;
+                rxbyte = (lt_tw_slave_rd_data >> (8 * (TOP_TEST_3W_DATA_BYTES - 1 - i)));
+               
+                if (rxbuffer_ram.data_RAM[TOP_TEST_3W_DATA_BYTES*j + i] != rxbyte)
+                begin
+                    $display(">>>> FAILED on USB-3W-RD");
+                    $display(">>>> DATA IUT: %x LT : %x", rxbuffer_ram.data_RAM[TOP_TEST_3W_DATA_BYTES*j + i], rxbyte);
+                    $display(">>>> ADDR IUT: %x LT : %x", address, lt_tw_slave_addr);
+                    $display(">>>> MODE LT : %b", lt_slave_mode_wr);
+                    $finish;
+                end
+                else
+                begin
+                    $display("OK byte idx=%d, burst idx=%d, LT RD DATA=%x", i, j, rxbyte);
+                end
+            end
+        end
     end
     endtask
 
 
     task Iut_Top_3w_Write;
         input [TOP_TEST_3W_ADDRESS_BITS - 1 : 0] address;
+        input [5 - 1 : 0] burst_size;
         input [TOP_TEST_3W_DATA_BITS - 1 : 0]    wr_data;
     begin : write_proc
-        integer i;
-        lt_ft2232h_usb_tx_size = 1 + TOP_TEST_3W_ADDR_BYTES + TOP_TEST_3W_DATA_BYTES;
+        integer i, j;
+        integer wr_data_offset;
+        
+        wr_data_offset = 1 + (burst_size > 0 ? 1 : 0) + TOP_TEST_3W_ADDR_BYTES;
+
+        lt_ft2232h_usb_tx_size = wr_data_offset + (1 + burst_size) * TOP_TEST_3W_DATA_BYTES;
         lt_ft2232h_usb_rx_size = 1;
         
         // write like a boss.
-        txbuffer_ram.data_RAM[0] = iut_top.pcl_3wm.CMD_WRITE;
-       
+        txbuffer_ram.data_RAM[0] = (burst_size > 0 ? 8'h80 : 8'h00) | iut_top.pcl_3wm.CMD_WRITE;
+      
+        if (burst_size > 0)
+        begin
+            txbuffer_ram.data_RAM[1] = burst_size;
+        end
+
         //send big endian mode
         for (i = 0; i < TOP_TEST_3W_ADDR_BYTES; i = i+1)
         begin
-            txbuffer_ram.data_RAM[i + 1] = 
+           txbuffer_ram.data_RAM[i + 1 + (burst_size > 0 ? 1 : 0)] = 
                 address >> ((TOP_TEST_3W_ADDR_BYTES - 1 - i) * 8);
         end
 
-        for (i = 0; i < TOP_TEST_3W_DATA_BYTES; i = i+1)
+        for (j = 0; j <= burst_size; j = j + 1)
         begin
-            txbuffer_ram.data_RAM[i + 1 + TOP_TEST_3W_ADDR_BYTES] = 
-                        wr_data >> ((TOP_TEST_3W_DATA_BYTES - 1 - i) * 8);
+            // Should fill all buffer here with burst data! 
+            for (i = 0; i < TOP_TEST_3W_DATA_BYTES; i = i+1)
+            begin
+                txbuffer_ram.data_RAM[wr_data_offset + i + TOP_TEST_3W_DATA_BYTES*j] = 
+                            wr_data >> ((TOP_TEST_3W_DATA_BYTES - 1 - i) * 8);
+            end 
         end 
+        
+        $display(">>>> TX CMD 3W WR BURST=%d", burst_size);
+        dump_usb_tx();
         
         lt_ft2232h_usb_tx_start = 1;
         #1
@@ -266,6 +373,40 @@ module top_testbench;
         #1
         lt_ft2232h_usb_rx_start = 0;
         wait(lt_ft2232h_usb_rx_done);
+
+
+        $display(">>>> LT WR DATA: %x", lt_tw_slave_wr_data);
+        dump_usb_rx(); 
+        
+        if (lt_slave_mode_wr != 1 || address != lt_tw_slave_addr)
+        begin
+            $display(">>>> FAILED on USB-3W-WR");
+            $display(">>>> ADDR IUT: %x LT : %x", address, lt_tw_slave_addr);
+            $display(">>>> MODE LT : %b", lt_slave_mode_wr);
+        end
+
+        for (j = 0; j <= burst_size; j = j + 1)
+        begin
+            for (i = 0; i < TOP_TEST_3W_DATA_BYTES; i = i + 1)
+            begin : tx_byte_check
+                reg [7:0] txbyte;
+                txbyte = (lt_tw_slave_wr_data >> (8 * (TOP_TEST_3W_DATA_BYTES - 1 - i)));
+               
+                if (txbuffer_ram.data_RAM[wr_data_offset + TOP_TEST_3W_DATA_BYTES*j + i] != txbyte)
+                begin
+                    $display(">>>> FAILED on USB-3W-RD");
+                    $display(">>>> DATA IUT: %x LT : %x", txbuffer_ram.data_RAM[TOP_TEST_3W_DATA_BYTES*j + i], txbyte);
+                    $display(">>>> ADDR IUT: %x LT : %x", address, lt_tw_slave_addr);
+                    $display(">>>> MODE LT : %b", lt_slave_mode_wr);
+                    $finish;
+                end
+                else
+                begin
+                    $display("OK byte idx=%d, burst idx=%d, LT WR DATA=%x", i, j, txbyte);
+                end
+            
+            end
+        end
     end
     endtask
 
@@ -274,10 +415,12 @@ module top_testbench;
         lt_ft2232h_usb_tx_size = 1;
         lt_ft2232h_usb_rx_size = 1;
 
-        lt_ft2232h_usb_tx_data = lt_ft2232h_usb_tx_data & 
-                                 ~(('h1 << (lt_ft2232h_usb_tx_size * 8)) - 1);
-        lt_ft2232h_usb_tx_data [7:0]    = iut_top.pcl_3wm.CMD_PING;
-
+        // write like a boss.
+        txbuffer_ram.data_RAM[0] = iut_top.pcl_3wm.CMD_PING;
+        
+        $display(">>>> TX CMD PING");
+        dump_usb_tx();
+        
         lt_ft2232h_usb_tx_start = 1;
         #1
         lt_ft2232h_usb_rx_start = 1;
@@ -285,6 +428,14 @@ module top_testbench;
         #1
         lt_ft2232h_usb_rx_start = 0;
         wait(lt_ft2232h_usb_rx_done);
+        
+        dump_usb_rx();
+
+        if (rxbuffer_ram.data_RAM[0] != iut_top.pcl_3wm.CMD_OK)
+        begin
+            $display(">>>> FAILED on USB-CMD-PING rxdata=%x", rxbuffer_ram.data_RAM[0]);
+            $finish;
+        end
     end
     endtask
 
@@ -295,10 +446,12 @@ module top_testbench;
         lt_ft2232h_usb_tx_size = 2;
         lt_ft2232h_usb_rx_size = 1;
 
-        lt_ft2232h_usb_tx_data = lt_ft2232h_usb_tx_data & 
-                                 ~(('h1 << (lt_ft2232h_usb_tx_size * 8)) - 1);
-        lt_ft2232h_usb_tx_data [7:0]    = iut_top.pcl_3wm.CMD_ECHO;
-        lt_ft2232h_usb_tx_data [15:8]   = echo_char;
+        // write like a boss.
+        txbuffer_ram.data_RAM[0] = iut_top.pcl_3wm.CMD_ECHO;
+        txbuffer_ram.data_RAM[1] = echo_char;
+        
+        $display(">>>> TX CMD ECHO CHAR=%x", echo_char);
+        dump_usb_tx();
         
         lt_ft2232h_usb_tx_start = 1;
         #1
@@ -307,6 +460,14 @@ module top_testbench;
         #1
         lt_ft2232h_usb_rx_start = 0;
         wait(lt_ft2232h_usb_rx_done);
+
+        dump_usb_rx();
+
+        if (rxbuffer_ram.data_RAM[0] != echo_char)
+        begin
+            $display(">>>> FAILED on USB-CMD-ECHO expected=%x rxdata=%x", echo_char, rxbuffer_ram.data_RAM[0]);
+            $finish;
+        end
     
     end
     endtask

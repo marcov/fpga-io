@@ -2,6 +2,8 @@
 
 module threewire_testbench;
 
+    `include "builtins_redefined.v"
+
     reg sim_clk;
     reg rst;
     reg iut_start;
@@ -56,7 +58,7 @@ module threewire_testbench;
     initial begin
         #0
         $dumpfile("test.lxt");
-        $dumpvars(0,threewire_testbench);
+        $dumpvars(0, threewire_testbench);
         sim_clk = 0;
         rst = 0;
         iut_start = 0;
@@ -102,6 +104,7 @@ module threewire_testbench;
         //since iut is reading, we have to feed the slave lt with a value.
         lt_tw_slave_rd_data = data;
         
+        $display("Trying RD with addr=%x LT_data=%x", addr, data); 
         wait(active); 
         iut_start = 0;  
         wait(!active); 
@@ -110,11 +113,13 @@ module threewire_testbench;
             lt_slave_mode_wr != iut_mode_wr)
         begin
             $display(">>>> FAILED on RX");
-            $display(">>>> DATA IUT: %x LT : %x", lt_tw_slave_rd_data, iut_rd_data);
-            $display(">>>> ADDR IUT: %x LT : %x", lt_tw_slave_addr, iut_addr);
-            $display(">>>> MODE IUT: %b LT : %b", lt_slave_mode_wr, iut_mode_wr);
+            $display(">>>> DATA IUT: %x LT : %x", iut_rd_data, lt_tw_slave_rd_data);
+            $display(">>>> ADDR IUT: %x LT : %x", iut_addr, lt_tw_slave_addr);
+            $display(">>>> MODE IUT: %b LT : %b", iut_mode_wr, lt_slave_mode_wr);
             $finish;
         end
+        else
+            $display("OK");
     end
     endtask
 
@@ -128,6 +133,8 @@ module threewire_testbench;
         iut_wr_data = data;
         iut_mode_wr = 1;
 
+
+        $display("Trying WR with addr=%x IUT_data=%x", addr, data); 
         wait(active); 
         iut_start = 0;
         wait(!active); 
@@ -136,11 +143,13 @@ module threewire_testbench;
             lt_slave_mode_wr != iut_mode_wr)
         begin
             $display(">>>> FAILED on TX");
-            $display(">>>> DATA IUT: %x LT : %x", lt_tw_slave_wr_data, iut_wr_data);
-            $display(">>>> ADDR IUT: %x LT : %x", lt_tw_slave_addr, iut_addr);
-            $display(">>>> MODE IUT: %b LT : %b", lt_slave_mode_wr, iut_mode_wr);
+            $display(">>>> DATA IUT: %x LT : %x", iut_wr_data, lt_tw_slave_wr_data);
+            $display(">>>> ADDR IUT: %x LT : %x", iut_addr, lt_tw_slave_addr);
+            $display(">>>> MODE IUT: %b LT : %b", iut_mode_wr, lt_slave_mode_wr);
             $finish;
         end
+        else
+            $display("OK");
     end
     endtask
 
@@ -149,74 +158,3 @@ module threewire_testbench;
 	always #7.5 sim_clk = !sim_clk;
 endmodule
 
-
-module tw_slave #( parameter TWS_ADDRESS_BITS = 10,
-                   parameter TWS_DATA_BITS = 32)
-               (tw_bus_clock,
-                tw_bus_chipselect,
-                tw_bus_data,
-                address,
-                wr_data,
-                rd_data,
-                mode_wr);
-    
-    input tw_bus_clock;
-    input tw_bus_chipselect;
-    inout tw_bus_data;
-    output reg mode_wr; //from master point of view
-    output reg [TWS_ADDRESS_BITS - 1 : 0] address;
-    output reg [TWS_DATA_BITS - 1 : 0] wr_data;
-    input  [TWS_DATA_BITS - 1 : 0] rd_data;
-    
-    //reg [$clog2($max(TWS_ADDRESS_BITS, TWS_DATA_BITS)) - 1 : 0] i;
-    reg [127 : 0] i;
-    wire tw_slave_data_in;
-    reg  tw_slave_data_out;
-    reg  tw_slave_out_enable;
-    
-    
-    assign tw_slave_data_in = tw_bus_data;
-    assign tw_bus_data = tw_slave_out_enable ? tw_slave_data_out : 8'bz;
-     
-    always
-    begin : slave_emulator
-        
-        // STARTS HERE
-        tw_slave_out_enable = 0;
-        tw_slave_data_out   = 0;
-        
-        wait (tw_bus_chipselect == 0)
-        
-        @(posedge tw_bus_clock) mode_wr = tw_slave_data_in;
-            
-        for (i = 0; i < TWS_ADDRESS_BITS; i = i + 1)
-        begin
-            @(posedge tw_bus_clock) address[TWS_ADDRESS_BITS - 1 - i] = tw_slave_data_in; 
-        end
-
-        if (mode_wr)
-        begin
-            // Master is writing some data. 
-            for (i = 0; i < TWS_DATA_BITS; i = i + 1)
-            begin
-                @(posedge tw_bus_clock) wr_data[TWS_DATA_BITS - 1 - i] = tw_slave_data_in; 
-            end
-        end
-        else
-        begin
-            // Master is reading some data.
-            for (i = 0; i < TWS_DATA_BITS; i = i + 1)
-            begin
-                @(posedge tw_bus_clock)  tw_slave_data_out =  rd_data[TWS_DATA_BITS - 1 - i];
-                if (i == 0)
-                    tw_slave_out_enable = 1;
-            end
-            
-            @ (posedge tw_bus_clock) tw_slave_out_enable = 0;
-        end
-
-        wait (tw_bus_chipselect == 1) 
-            // fake instruction
-            i = i;
-    end
-endmodule
