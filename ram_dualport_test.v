@@ -105,12 +105,15 @@ module ram_dualport_testbench;
         @(posedge sim_clk)
         begin
             wait (sim_clk == 0);
-            if (iut_in_data_a != iut_out_data_b)
+            if (iut_in_data_a !== iut_out_data_b)
             begin
                 $display(">>>> FAILED on WR A - RD B");
                 $display(">>>> ADDR: %x", iut_addr_a);
                 $display(">>>> DATA A: %x - DATA B: %x", iut_in_data_a, iut_out_data_b);
                 $finish;
+            end
+            begin
+                $display("OK");
             end
 
             iut_wr_a = 0;
@@ -140,12 +143,16 @@ module ram_dualport_testbench;
         @(posedge sim_clk)
         begin
             wait (sim_clk == 0);
-            if (iut_in_data_b != iut_out_data_a)
+            if (iut_in_data_b !== iut_out_data_a)
             begin
                 $display(">>>> FAILED on WR B - RD A");
                 $display(">>>> ADDR: %x", iut_addr_b);
                 $display(">>>> DATA A: %x - DATA B: %x", iut_out_data_a, iut_in_data_b);
                 $finish;
+            end
+            else
+            begin
+                $display("OK");
             end
             
             iut_wr_b = 0;

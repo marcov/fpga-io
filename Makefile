@@ -11,6 +11,7 @@ SRCS_ALL = \
 	top_test.v \
 	ft245a_usb_if.v \
 	ft2232h_emulator.v \
+	ram_singleport.v \
 	ram_dualport.v \
 	led_ctrl.v \
 	rom_lut.v \
@@ -20,13 +21,13 @@ SRCS_ALL = \
 	threewire_slave_emulator.v \
 	clockgen_test.v
 
-IVERILOG_DEFINES=-D__IVERILOG__ -DTHREEWIRE_FOR_FM
+IVERILOG_DEFINES=-D__IVERILOG__ -DTHREEWIRE_FOR_FM -DBUILD_FOR_SIMULATION
 
 ######################################################################
 
 #Generates a vvp file from the passed target name (source code name without .v)
 %:
-	iverilog $(IVERILOG_DEFINES) -o $*.vvp $*.v $*_test.v
+	iverilog $(IVERILOG_DEFINES) -o $*.vvp $*.v $*_test.v $(SRC_TO_ADD)
 	vvp $*.vvp -lxt2
 
 all: $(SRCS_ALL)

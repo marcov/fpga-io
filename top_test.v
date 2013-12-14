@@ -145,20 +145,17 @@ module top_testbench;
 
      
     wire [TOP_TEST_3W_ADDRESS_BITS - 1 : 0] lt_tw_slave_addr;
-    reg  [TOP_TEST_3W_DATA_BITS - 1 : 0]    lt_tw_slave_rd_data;
-    wire [TOP_TEST_3W_DATA_BITS - 1 : 0]    lt_tw_slave_wr_data;
     wire                                    lt_tw_slave_mode_wr;
     
     /* Threewire slave: lower tester */
     tw_slave  #(.TWS_ADDRESS_BITS(TOP_TEST_3W_ADDRESS_BITS),
                 .TWS_DATA_BITS(TOP_TEST_3W_DATA_BITS))
              lt_3w_slave(
+                .in_clk(sim_clk),
                 .tw_bus_clock(tw_bus_clock),
                 .tw_bus_chipselect(tw_bus_chipselect),
                 .tw_bus_data(tw_bus_data),
                 .address(lt_tw_slave_addr),
-                .wr_data(lt_tw_slave_wr_data),
-                .rd_data(lt_tw_slave_rd_data),
                 .mode_wr(lt_slave_mode_wr));
 
 ///////////////////////////////////////////////////////////////////
@@ -189,26 +186,44 @@ module top_testbench;
         //
         $display("================ SIMULATION STARTED ================");
         
-        Iut_Top_3w_Read('h01AA, 0, 'hDEADBEEF);
+        Iut_Top_3w_Read('h01AA, 0, 1);
         $display("====================================================");
 `ifdef THREEWIRE_HAS_BURST
-        Iut_Top_3w_Read('h01BB, 1, 'hDEADBEEF);
-        $display("====================================================");
-        Iut_Top_3w_Read('h00CC, 2, 'hDEADBEEF);
-        $display("====================================================");
-        Iut_Top_3w_Read('h01DD, 3, 'hDEADBEEF);
-        $display("====================================================");
+        begin :extra_test_rd
+            integer i;
+            integer seed;
+            integer address;
+            
+            address = 'h01BB;
+            seed = 1;
+            
+            for (i = 1; i < 10; i = i + 1)
+            begin
+                Iut_Top_3w_Read(address, i, seed);
+                address = address + 1;
+                $display("====================================================");
+            end
+        end
 `endif
 
-        Iut_Top_3w_Write('h01BB, 0, 'hBEEFDEAD);
+        Iut_Top_3w_Write('h01BB, 0, 5);
         $display("====================================================");
 `ifdef THREEWIRE_HAS_BURST
-        Iut_Top_3w_Write('h01FF, 1, 'hBEEFDEAD);
-        $display("====================================================");
-        Iut_Top_3w_Write('h0100, 2, 'hBEEFDEAD);
-        $display("====================================================");
-        Iut_Top_3w_Write('h0080, 3, 'hBEEFDEAD);
-        $display("====================================================");
+        begin :extra_test_wr
+            integer i;
+            integer seed;
+            integer address;
+            
+            address = 'h01FA;
+            seed = 2;
+            
+            for (i = 1; i < 10; i = i + 1)
+            begin
+                Iut_Top_3w_Write(address, i, seed);
+                address = address + 1;
+                $display("====================================================");
+            end
+        end
 `endif
         
         Iut_Top_3w_Ping();
@@ -254,15 +269,25 @@ module top_testbench;
     task Iut_Top_3w_Read;
         input [TOP_TEST_3W_ADDRESS_BITS - 1 : 0] address;
         input [5 - 1 : 0] burst_size;
-        input [TOP_TEST_3W_DATA_BITS - 1 : 0]    lt_rd_data;
+        input integer seed;
     begin : read_proc
+        localparam ADDRESS_MASK = ((1<<TOP_TEST_3W_ADDRESS_BITS) - 1);
         integer i;
         integer j;
         integer addr_offset;
-
+        integer lt_read_data;
+        reg [TOP_TEST_3W_DATA_BITS - 1 : 0]    lt_test_vector [0 : 31];
+        
         addr_offset = 1 + (burst_size > 0 ? 1 : 0);
-        lt_tw_slave_rd_data = lt_rd_data & ((1 << TOP_TEST_3W_DATA_BITS) - 1) ;
-        address = address & ((1 << TOP_TEST_3W_ADDRESS_BITS) - 1) ;
+        
+        //since iut is reading, we have to feed the slave lt with a value.
+        for (i = 0 ; i < burst_size + 1; i= i + 1)
+        begin
+            // Fill test vector
+            $display("Filling mem_3w slave");
+            lt_test_vector[i] = $random(seed) % ((1<<TOP_TEST_3W_DATA_BITS) - 1);
+            lt_3w_slave.mem_3w.data_RAM[(address + i) & ADDRESS_MASK] = lt_test_vector[i];
+        end
         
         lt_ft2232h_usb_tx_size = addr_offset + TOP_TEST_3W_ADDR_BYTES;
         lt_ft2232h_usb_rx_size = (1 + burst_size) * TOP_TEST_3W_DATA_BYTES;
@@ -293,11 +318,14 @@ module top_testbench;
         lt_ft2232h_usb_rx_start = 0;
         wait(lt_ft2232h_usb_rx_done);
         
-        $display(">>>> LT RD DATA: %x", lt_tw_slave_rd_data);
+        for (i = 0 ; i < burst_size + 1; i= i + 1)
+        begin
+            $display(">>>> LT RD DATA: %x", lt_test_vector[i]);
+        end
         dump_usb_rx(); 
        
         
-        if (lt_slave_mode_wr != 0 || address != lt_tw_slave_addr)
+        if (lt_slave_mode_wr !== 0 || address !== lt_tw_slave_addr)
         begin
             $display(">>>> FAILED on USB-3W-RD");
             $display(">>>> ADDR IUT: %x LT : %x", address, lt_tw_slave_addr);
@@ -306,12 +334,14 @@ module top_testbench;
 
         for (j = 0; j <= burst_size; j = j + 1)
         begin
+            lt_read_data = lt_3w_slave.mem_3w.data_RAM[(address + j) & ADDRESS_MASK];
+
             for (i = 0; i < TOP_TEST_3W_DATA_BYTES; i = i + 1)
             begin : rx_byte_check
                 reg [7:0] rxbyte;
-                rxbyte = (lt_tw_slave_rd_data >> (8 * (TOP_TEST_3W_DATA_BYTES - 1 - i)));
+                rxbyte = (lt_read_data >> (8 * (TOP_TEST_3W_DATA_BYTES - 1 - i)));
                
-                if (rxbuffer_ram.data_RAM[TOP_TEST_3W_DATA_BYTES*j + i] != rxbyte)
+                if (rxbuffer_ram.data_RAM[TOP_TEST_3W_DATA_BYTES*j + i] !== rxbyte)
                 begin
                     $display(">>>> FAILED on USB-3W-RD");
                     $display(">>>> DATA IUT: %x LT : %x", rxbuffer_ram.data_RAM[TOP_TEST_3W_DATA_BYTES*j + i], rxbyte);
@@ -332,11 +362,21 @@ module top_testbench;
     task Iut_Top_3w_Write;
         input [TOP_TEST_3W_ADDRESS_BITS - 1 : 0] address;
         input [5 - 1 : 0] burst_size;
-        input [TOP_TEST_3W_DATA_BITS - 1 : 0]    wr_data;
+        input integer seed;
     begin : write_proc
+        localparam ADDRESS_MASK = ((1<<TOP_TEST_3W_ADDRESS_BITS) - 1);
         integer i, j;
         integer wr_data_offset;
+        integer lt_written_data;
+        reg [TOP_TEST_3W_DATA_BITS - 1 : 0]    iut_test_vector [0 : 31];
         
+        for (i = 0 ; i < burst_size + 1; i= i + 1)
+        begin
+            // Fill test vector
+            $display("Filling iut test vector");
+            iut_test_vector[i] = $random(seed) % ((1<<TOP_TEST_3W_DATA_BITS) - 1);
+        end
+
         wr_data_offset = 1 + (burst_size > 0 ? 1 : 0) + TOP_TEST_3W_ADDR_BYTES;
 
         lt_ft2232h_usb_tx_size = wr_data_offset + (1 + burst_size) * TOP_TEST_3W_DATA_BYTES;
@@ -363,7 +403,7 @@ module top_testbench;
             for (i = 0; i < TOP_TEST_3W_DATA_BYTES; i = i+1)
             begin
                 txbuffer_ram.data_RAM[wr_data_offset + i + TOP_TEST_3W_DATA_BYTES*j] = 
-                            wr_data >> ((TOP_TEST_3W_DATA_BYTES - 1 - i) * 8);
+                            iut_test_vector[j] >> ((TOP_TEST_3W_DATA_BYTES - 1 - i) * 8);
             end 
         end 
         
@@ -378,11 +418,15 @@ module top_testbench;
         lt_ft2232h_usb_rx_start = 0;
         wait(lt_ft2232h_usb_rx_done);
 
-
-        $display(">>>> LT WR DATA: %x", lt_tw_slave_wr_data);
+        
+        for (i = 0 ; i < burst_size + 1; i= i + 1)
+        begin
+            $display(">>>> LT WR DATA: %x", 
+                lt_3w_slave.mem_3w.data_RAM[(address + i) & ADDRESS_MASK]);
+        end
         dump_usb_rx(); 
         
-        if (lt_slave_mode_wr != 1 || address != lt_tw_slave_addr)
+        if (lt_slave_mode_wr !== 1 || address !== lt_tw_slave_addr)
         begin
             $display(">>>> FAILED on USB-3W-WR");
             $display(">>>> ADDR IUT: %x LT : %x", address, lt_tw_slave_addr);
@@ -391,14 +435,16 @@ module top_testbench;
 
         for (j = 0; j <= burst_size; j = j + 1)
         begin
+            lt_written_data = lt_3w_slave.mem_3w.data_RAM[(address + j) & ADDRESS_MASK];
+
             for (i = 0; i < TOP_TEST_3W_DATA_BYTES; i = i + 1)
             begin : tx_byte_check
                 reg [7:0] txbyte;
-                txbyte = (lt_tw_slave_wr_data >> (8 * (TOP_TEST_3W_DATA_BYTES - 1 - i)));
+                txbyte = (lt_written_data >> (8 * (TOP_TEST_3W_DATA_BYTES - 1 - i)));
                
-                if (txbuffer_ram.data_RAM[wr_data_offset + TOP_TEST_3W_DATA_BYTES*j + i] != txbyte)
+                if (txbuffer_ram.data_RAM[wr_data_offset + TOP_TEST_3W_DATA_BYTES*j + i] !== txbyte)
                 begin
-                    $display(">>>> FAILED on USB-3W-RD");
+                    $display(">>>> FAILED on USB-3W-WR");
                     $display(">>>> DATA IUT: %x LT : %x", txbuffer_ram.data_RAM[TOP_TEST_3W_DATA_BYTES*j + i], txbyte);
                     $display(">>>> ADDR IUT: %x LT : %x", address, lt_tw_slave_addr);
                     $display(">>>> MODE LT : %b", lt_slave_mode_wr);
@@ -435,7 +481,7 @@ module top_testbench;
         
         dump_usb_rx();
 
-        if (rxbuffer_ram.data_RAM[0] != iut_top.pcl_3wm.CMD_OK)
+        if (rxbuffer_ram.data_RAM[0] !== iut_top.pcl_3wm.CMD_OK)
         begin
             $display(">>>> FAILED on USB-CMD-PING rxdata=%x", rxbuffer_ram.data_RAM[0]);
             $finish;
@@ -467,7 +513,7 @@ module top_testbench;
 
         dump_usb_rx();
 
-        if (rxbuffer_ram.data_RAM[0] != echo_char)
+        if (rxbuffer_ram.data_RAM[0] !== echo_char)
         begin
             $display(">>>> FAILED on USB-CMD-ECHO expected=%x rxdata=%x", echo_char, rxbuffer_ram.data_RAM[0]);
             $finish;
