@@ -1,22 +1,10 @@
-////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date:    23:06:02 10/08/2013 
-// Design Name: 
-// Module Name:     
-// Project Name: 
-// Target Devices: 
-// Tool versions: 
-// Description: 
-//
-// Dependencies: 
-//
-// Revision: 
-// Revision 0.01 - File Created
-// Additional Comments: 
-//
-////////////////////////////////////////////////////////////////////////////////
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
 module ft245_asynch_ctrl(
                       in_clk,
                       in_rst,

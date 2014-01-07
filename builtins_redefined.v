@@ -1,3 +1,10 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
 
 /* clog2 redefinition for XST */
 `ifdef __IVERILOG__

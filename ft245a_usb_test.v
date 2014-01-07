@@ -1,26 +1,12 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
 `timescale 1ns / 1ps
 
-////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer:
-//
-// Create Date:   21:50:49 10/09/2013
-// Design Name:   
-// Module Name:   C:/Documents and Settings/Administrator/Desktop/helloworld/ftdi_test.v
-// Project Name:  helloworld
-// Target Device:  
-// Tool versions:  
-// Description: 
-//
-// Verilog Test Fixture created by ISE for module: 
-//
-// Dependencies:
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-////////////////////////////////////////////////////////////////////////////////
 module ftdi_testbench;
 
     // Include functions builtins redefinition for which XST is missing support.

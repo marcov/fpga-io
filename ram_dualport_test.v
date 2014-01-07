@@ -1,3 +1,10 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
 `timescale 1ns / 1ps
 
 module ram_dualport_testbench;

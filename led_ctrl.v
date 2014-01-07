@@ -1,3 +1,11 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
+
 module led_ctrl(input  in_clk,
                 input  in_rst,
                 output out_led);

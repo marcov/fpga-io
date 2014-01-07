@@ -1,3 +1,11 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
+
 module io_synchronizer (in_clk,
                         in_rst,
                         in_data_rx_hsk_req,

@@ -1,4 +1,12 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
 /* Replacement of Xilinx DCM clock generation. To be used with Icarus Verilog simulation only! */
+
 module clockgen(CLKIN_IN, 
                 RST_IN, 
                 CLKDV_OUT, 

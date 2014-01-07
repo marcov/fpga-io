@@ -1,26 +1,12 @@
-`timescale 1ns / 1ps
+/**
+ * Project: USB-3W FPGA interface  
+ * Author:  Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
 
-////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer:
-//
-// Create Date:   21:51:26 10/09/2013
-// Design Name:   top
-// Module Name:   C:/Documents and Settings/Administrator/Desktop/helloworld/top_test.v
-// Project Name:  helloworld
-// Target Device:  
-// Tool versions:  
-// Description: 
-//
-// Verilog Test Fixture created by ISE for module: top
-//
-// Dependencies:
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-////////////////////////////////////////////////////////////////////////////////
+`timescale 1ns / 1ps
 
 `include "project_config.v"
 
