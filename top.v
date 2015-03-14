@@ -1,24 +1,12 @@
-`timescale 1ns / 1ps
-////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date:    23:13:32 10/08/2013 
-// Design Name: 
-// Module Name:    top 
-// Project Name: 
-// Target Devices: 
-// Tool versions: 
-// Description: 
-//
-// Dependencies: 
-//
-// Revision: 
-// Revision 0.01 - File Created
-// Additional Comments: 
-//
-////////////////////////////////////////////////////////////////////////////////
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
 
+`timescale 1ns / 1ps
 `include "project_config.v"
 
 module top

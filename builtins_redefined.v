@@ -1,3 +1,12 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
+
+`define _cdiv8(dividend) ((dividend >> 'h3) + ((dividend & 'b111) ? 1 : 0))
 
 /* clog2 redefinition for XST */
 `ifdef __IVERILOG__
