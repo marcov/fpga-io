@@ -1,3 +1,11 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
+
 ////////////////////////////////////////////////////////////////////////////////////
 //
 // Decodes the messages from host for 3w R/W.

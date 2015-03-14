@@ -1,3 +1,11 @@
+/**
+ * Project: USB-3W FPGA interface  
+ * Author: Marco Vedovati 
+ * Date:
+ * File:
+ *
+ */
+
 /* Threewire Master
  *
  * Signal description:

@@ -1,6 +1,6 @@
 /**
  * Project: USB-3W FPGA interface  
- * Author: Marco Vedovati 
+ * Author:  Marco Vedovati 
  * Date:
  * File:
  *
