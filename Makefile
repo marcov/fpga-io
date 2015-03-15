@@ -21,7 +21,11 @@ SRCS_ALL = \
 	threewire_slave_emulator.v \
 	clockgen_test.v
 
-IVERILOG_DEFINES=-D__IVERILOG__ -DTHREEWIRE_FOR_FM -DBUILD_FOR_SIMULATION
+IVERILOG_DEFINES=-D__IVERILOG__ \
+				 -DTHREEWIRE_FOR_NFC \
+				 -DBUILD_FOR_SIMULATION \
+                 -DSIMULATION_SEED_INITIAL=$(shell echo $$RANDOM) \
+				 #-DSIM_RUN_ALL_ADDR_DATA_BITS
 
 ######################################################################
 
