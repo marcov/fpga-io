@@ -15,18 +15,18 @@
   <version xil_pn:ise_version="14.6" xil_pn:schema_version="2"/>
 
   <files>
-    <file xil_pn:name="top.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/threewire_burst/top.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="10"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="9"/>
     </file>
-    <file xil_pn:name="ledon.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/ledon.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="0"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
     <file xil_pn:name="top.ucf" xil_pn:type="FILE_UCF">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
-    <file xil_pn:name="top_test.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/threewire_burst/sim/top_test.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="13"/>
       <association xil_pn:name="PostMapSimulation" xil_pn:seqID="122"/>
       <association xil_pn:name="PostRouteSimulation" xil_pn:seqID="122"/>
@@ -34,67 +34,67 @@
     </file>
     <file xil_pn:name="ipcore_dir/clockgen.xaw" xil_pn:type="FILE_XAW">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="7"/>
-      <association xil_pn:name="Implementation" xil_pn:seqID="6"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="8"/>
     </file>
-    <file xil_pn:name="threewire.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/threewire_burst/threewire.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="1"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="1"/>
     </file>
-    <file xil_pn:name="threewire_test.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/threewire_burst/sim/threewire_test.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="0"/>
       <association xil_pn:name="PostMapSimulation" xil_pn:seqID="155"/>
       <association xil_pn:name="PostRouteSimulation" xil_pn:seqID="155"/>
       <association xil_pn:name="PostTranslateSimulation" xil_pn:seqID="155"/>
     </file>
-    <file xil_pn:name="io_synchronizer.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/io_synchronizer.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="8"/>
-      <association xil_pn:name="Implementation" xil_pn:seqID="7"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="6"/>
     </file>
-    <file xil_pn:name="protocol_3w.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/threewire_burst/protocol_3w.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="5"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="4"/>
     </file>
-    <file xil_pn:name="rom_lut.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/rom_lut.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="2"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="2"/>
     </file>
-    <file xil_pn:name="led_ctrl.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/led_ctrl.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="6"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="5"/>
     </file>
-    <file xil_pn:name="ram_dualport.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/ram_dualport.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="3"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="3"/>
     </file>
-    <file xil_pn:name="ft2232h_emulator.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/sim/ft2232h_emulator.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="12"/>
       <association xil_pn:name="PostMapSimulation" xil_pn:seqID="202"/>
       <association xil_pn:name="PostRouteSimulation" xil_pn:seqID="202"/>
       <association xil_pn:name="PostTranslateSimulation" xil_pn:seqID="202"/>
     </file>
-    <file xil_pn:name="threewire_slave_emulator.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/threewire_burst/sim/threewire_slave_emulator.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="11"/>
       <association xil_pn:name="PostMapSimulation" xil_pn:seqID="203"/>
       <association xil_pn:name="PostRouteSimulation" xil_pn:seqID="203"/>
       <association xil_pn:name="PostTranslateSimulation" xil_pn:seqID="203"/>
     </file>
-    <file xil_pn:name="ft245a_usb_if.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/ft245a_usb_if.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="9"/>
-      <association xil_pn:name="Implementation" xil_pn:seqID="8"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="7"/>
     </file>
-    <file xil_pn:name="ft245a_usb_test.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/sim/ft245a_usb_test.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="0"/>
       <association xil_pn:name="PostMapSimulation" xil_pn:seqID="172"/>
       <association xil_pn:name="PostRouteSimulation" xil_pn:seqID="172"/>
       <association xil_pn:name="PostTranslateSimulation" xil_pn:seqID="172"/>
     </file>
-    <file xil_pn:name="led_ctrl_test.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/sim/led_ctrl_test.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="0"/>
       <association xil_pn:name="PostMapSimulation" xil_pn:seqID="173"/>
       <association xil_pn:name="PostRouteSimulation" xil_pn:seqID="173"/>
       <association xil_pn:name="PostTranslateSimulation" xil_pn:seqID="173"/>
     </file>
-    <file xil_pn:name="ram_singleport.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="src/ram_singleport.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="144"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
@@ -212,7 +212,7 @@
     <property xil_pn:name="Ignore User Timing Constraints Map" xil_pn:value="false" xil_pn:valueState="default"/>
     <property xil_pn:name="Ignore User Timing Constraints Par" xil_pn:value="false" xil_pn:valueState="default"/>
     <property xil_pn:name="Implementation Top" xil_pn:value="Module|top" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Implementation Top File" xil_pn:value="top.v" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Implementation Top File" xil_pn:value="src/threewire_burst/top.v" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Implementation Top Instance Path" xil_pn:value="/top" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Include 'uselib Directive in Verilog File" xil_pn:value="false" xil_pn:valueState="default"/>
     <property xil_pn:name="Include SIMPRIM Models in Verilog File" xil_pn:value="false" xil_pn:valueState="default"/>
@@ -431,8 +431,8 @@
     <!-- Do not hand-edit this section, as it will be overwritten when the    -->
     <!-- project is analyzed based on files automatically identified as       -->
     <!-- include files.                                                       -->
-    <file xil_pn:name="builtins_redefined.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="project_config.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="src/threewire_burst/project_config.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="src/builtins_redefined.v" xil_pn:type="FILE_VERILOG"/>
   </autoManagedFiles>
 
 </project>
