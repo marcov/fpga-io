@@ -22,7 +22,7 @@ module rom_lookup_table
 (* ram_style = "block" *) reg [ (ROM_DATA_WIDTH - 1) : 0] mem [ 0 : (2**ROM_ADDR_WIDTH - 1) ];
 
 initial begin
-    $readmemh("./src/mem_init_vlog.mif", mem, 0, ((2**ROM_ADDR_WIDTH) - 1)); 
+    $readmemh("./mem_init_vlog.mif", mem, 0, ((2**ROM_ADDR_WIDTH) - 1)); 
 end
 
 always @(posedge in_clk)
