@@ -1,0 +1,51 @@
+####
+CONFIG ENABLE_SUSPEND = "NO";
+
+
+########### IO constraints
+#LED
+
+NET "out_led" LOC = T10;
+NET "out_led" IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;
+
+#RESET
+NET "in_reset_n" LOC = R13;
+NET "in_reset_n" IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE;
+
+#External oscillator
+NET "in_ext_osc" LOC = R9;
+NET "in_ext_osc" IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE; 
+
+
+# FTDI related
+NET  "io_ftdi_data[0]" LOC = "T4" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[1]" LOC = "R5" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[2]" LOC = "T5" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[3]" LOC = "T6" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[4]" LOC = "N7" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[5]" LOC = "P6" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[6]" LOC = "P7" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "io_ftdi_data[7]" LOC = "N8" | SLEW = FAST | DRIVE = 8;     #bank 2 
+#
+NET  "out_ftdi_rd_n"   LOC = "P8" | SLEW = FAST | DRIVE = 8;     #bank 2 
+NET  "in_ftdi_rxf_n"   LOC = "P9";     #bank 2 
+NET  "in_ftdi_txe_n"   LOC = "N9";     #bank 2 
+NET  "out_ftdi_wr_n"   LOC = "T8" | SLEW = FAST | DRIVE = 8;     #bank 2 
+# FTDI SIWU: not used
+#NET  "ftdi_si"        LOC = "T7" | SLEW = SLOW | DRIVE = 8;     #bank 2
+NET  "*_ftdi_*"        IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;
+
+
+#BITBANG
+NET "io_bitbang_pads[0]"   LOC = D13 | SLEW = FAST | DRIVE = 4;
+NET "io_bitbang_pads[1]"   LOC = C13 | SLEW = FAST | DRIVE = 4;
+NET "io_bitbang_pads[2]"   LOC = D11 | SLEW = FAST | DRIVE = 4;
+#NOTE
+#C12, C10 not working?
+NET "io_bitbang_pads[3]"   LOC = C12 | SLEW = FAST | DRIVE = 4;
+NET "io_bitbang_pads[4]"   LOC = C10 | SLEW = FAST | DRIVE = 4;
+#END NOTE
+NET "io_bitbang_pads[5]"   LOC = D9  | SLEW = FAST | DRIVE = 4;
+NET "io_bitbang_pads[6]"   LOC = C8  | SLEW = FAST | DRIVE = 4;
+NET "io_bitbang_pads[7]"   LOC = D8  | SLEW = FAST | DRIVE = 4;
+NET "*_bitbang_*"       IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;

@@ -8,7 +8,7 @@
 
 `timescale 1ns / 1ps
 
-module top #(parameter TOP_BB_IO_NUM_OF = 4)
+module top #(parameter TOP_BB_IO_NUM_OF = 8)
    (input in_ext_osc,
     input in_reset_n,
     output out_led,
