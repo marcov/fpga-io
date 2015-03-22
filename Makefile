@@ -30,27 +30,36 @@ SRC_CORE = \
 	$(SRC_SUBDIR)/rom_lut.v \
 	$(SRC_SUBDIR)/io_synchronizer.v \
 
-SRC_MODEL = \
-	$(SRC_SUBDIR)/$(SIM_SUBDIR)/ft2232h_emulator.v \
-
-SRC_TEST = \
-	$(SRC_SUBDIR)/$(SIM_SUBDIR)/clockgen_test.v
+SRC_CORE_MODEL = \
+	$(SRC_SUBDIR)/$(SIM_SUBDIR)/ft2232h_model.v \
+	$(SRC_SUBDIR)/$(SIM_SUBDIR)/clockgen_model.v
 
 ######################################################################
 
 SRC_ALL = \
 		  $(SRC_CORE) \
-          $(SRC_MODEL) \
-		  $(SRC_TEST)  \
+          $(SRC_CORE_MODEL)
 
 ######################################################################
-$(info "SRC MODULE is $(SRC_MODULE)")
-$(info "SRC MODULE MODEL is $(SRC_MODULE_MODEL)")
-$(info "SRC MODULE TEST is $(SRC_MODULE_TEST)")
+$(info SRC MODULE:       "$(SRC_MODULE)")
+$(info SRC MODULE MODEL: "$(SRC_MODULE_MODEL)")
+$(info SRC MODULE TEST:  "$(SRC_MODULE_TEST)")
 
-$(foreach SRC_FILE,$(SRC_MODULE),SRC_ALL += $(SRC_SUBDIR)/$(MODULE_NAME)/$(SRC_FILE))
-$(foreach SRC_FILE,$(SRC_MODULE_MODEL),SRC_ALL += $(SRC_SUBDIR)/$(MODULE_NAME)/sim/$(SRC_FILE))
-$(foreach SRC_FILE,$(SRC_MODULE_TEST),SRC_ALL += $(SRC_SUBDIR)/$(MODULE_NAME)/sim/$(SRC_FILE))
+
+#dirs := a b c d
+#files := $(foreach dir,$(dirs),foobar/$(dir))
+#$(info "file is $(files)")
+
+SRC_AUTO :=
+SRC_AUTO += $(foreach src_file,$(SRC_MODULE),$(SRC_SUBDIR)/$(MODULE_NAME)/$(src_file))
+SRC_AUTO += $(foreach src_file,$(SRC_MODULE_MODEL),$(SRC_SUBDIR)/$(MODULE_NAME)/sim/$(src_file))
+SRC_AUTO += $(foreach src_file,$(SRC_MODULE_TEST),$(SRC_SUBDIR)/$(MODULE_NAME)/sim/$(src_file))
+
+$(info src auto: "$(SRC_AUTO)")
+$(info )
+$(info )
+
+SRC_ALL += $(SRC_AUTO)
 
 ######################################################################
 
@@ -62,7 +71,7 @@ IVERILOG_DEFINES=-D__IVERILOG__ \
 
 IVERILOG_DEFINES += \
                  -I $(CURR_DIR)/$(SRC_SUBDIR) \
-                 -I $(CURR_DIR)/$(SRC_SUBDIR)/$(THREEWIRE_SUBDIR)
+                 -I $(CURR_DIR)/$(SRC_SUBDIR)/$(MODULE_NAME)
 
 ######################################################################
 
