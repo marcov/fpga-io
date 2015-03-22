@@ -24,7 +24,7 @@ module top_testbench;
     // Include functions builtins redefinition for which XST is missing support.
     `include "builtins_redefined.v"
     
-    localparam TOP_TEST_BB_IO_NUM_OF = 4;
+    localparam TOP_TEST_BB_IO_NUM_OF = 8;
     
     localparam TOP_TEST_BB_IO_DATA_BYTES  = `_cdiv(TOP_TEST_BB_IO_NUM_OF, 8);
     localparam TOP_TEST_BB_IO_MASK = ((1 << TOP_TEST_BB_IO_NUM_OF) - 1);
@@ -165,7 +165,7 @@ module top_testbench;
         // 
         //
         
-        Iut_Top_Io_Read(4'b1111);
+        Iut_Top_Io_Read('b1111);
         $display("====================================================");
 
         Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_DIRECTION, TOP_TEST_BB_IO_MASK);
@@ -174,19 +174,19 @@ module top_testbench;
         Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_OUTVAL, TOP_TEST_BB_IO_MASK);
         $display("====================================================");
         
-        Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_OUTVAL, 4'b0011);
+        Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_OUTVAL, 'b0011);
         $display("====================================================");
         
-        Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_DIRECTION, 4'b0011);
+        Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_DIRECTION, 'b0011);
         $display("====================================================");
         
-        Iut_Top_Io_Read(4'b1111);
+        Iut_Top_Io_Read('b1111);
         $display("====================================================");
         
-        Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_OUTVAL, 4'b0000);
+        Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_OUTVAL, 'b0000);
         $display("====================================================");
         
-        Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_DIRECTION, 4'b1111);
+        Iut_Top_Io_Write(iut_top.pcl_bb.PARAM_DIRECTION, 'b1111);
         $display("====================================================");
         
         Iut_Top_3w_Ping();
