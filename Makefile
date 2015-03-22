@@ -1,6 +1,6 @@
 ######################################################################
 
-THREEWIRE_MODE ?= basic
+MODULE_NAME ?= threewire_basic
 
 ######################################################################
 
@@ -9,19 +9,16 @@ OBJ_EXT=vvp
 OBJS = $(SRCS:%.v=%.$(OBJ_EXT))
 SRC_SUBDIR = src
 SIM_SUBDIR = sim
-THREEWIRE_BASIC_SUBDIR = threewire_basic
-THREEWIRE_BURST_SUBDIR = threewire_burst
+
+MODULES_LIST = threewire_basic threewire_burst io_bitbang
 
 CURR_DIR = $(shell pwd)
 
-
-ifeq ($(THREEWIRE_MODE),basic)
-    $(info Compiling for threemode mode basic)
-    THREEWIRE_SUBDIR = $(THREEWIRE_BASIC_SUBDIR)
-else
-    $(info Compiling for threemode mode burst)
-    THREEWIRE_SUBDIR = $(THREEWIRE_BURST_SUBDIR)
+ifeq ($(filter $(MODULES_LIST),$(MODULE_NAME)),)
+    $(error Unsupported MODULE_NAME='$(MODULE_NAME)'. Available modules: '$(MODULES_LIST)')
 endif
+
+include $(SRC_SUBDIR)/$(MODULE_NAME)/Makefile.inc
 
 $#####################################################################
 
@@ -41,29 +38,21 @@ SRC_TEST = \
 
 ######################################################################
 
-SRC_THREEWIRE = \
-	$(SRC_SUBDIR)/$(THREEWIRE_SUBDIR)/threewire.v  \
-	$(SRC_SUBDIR)/$(THREEWIRE_SUBDIR)/protocol_3w.v \
-	$(SRC_SUBDIR)/$(THREEWIRE_SUBDIR)/top.v \
-	$(SRC_SUBDIR)/$(THREEWIRE_SUBDIR)/project_config.v \
-	
-SRC_THREEWIRE_MODEL = \
-	$(SRC_SUBDIR)/$(THREEWIRE_SUBDIR)/$(SIM_SUBDIR)/threewire_slave_emulator.v 
-
-SRC_THREEWIRE_TEST = \
-	$(SRC_SUBDIR)/$(THREEWIRE_SUBDIR)/$(SIM_SUBDIR)/top_test.v \
-
-$#####################################################################
-
 SRC_ALL = \
 		  $(SRC_CORE) \
           $(SRC_MODEL) \
-		  $(SRC_THREEWIRE) \
-		  $(SRC_THREEWIRE_MODEL) \
-		  $(SRC_THREEWIRE_TEST) \
 		  $(SRC_TEST)  \
 
-$#####################################################################
+######################################################################
+$(info "SRC MODULE is $(SRC_MODULE)")
+$(info "SRC MODULE MODEL is $(SRC_MODULE_MODEL)")
+$(info "SRC MODULE TEST is $(SRC_MODULE_TEST)")
+
+$(foreach SRC_FILE,$(SRC_MODULE),SRC_ALL += $(SRC_SUBDIR)/$(MODULE_NAME)/$(SRC_FILE))
+$(foreach SRC_FILE,$(SRC_MODULE_MODEL),SRC_ALL += $(SRC_SUBDIR)/$(MODULE_NAME)/sim/$(SRC_FILE))
+$(foreach SRC_FILE,$(SRC_MODULE_TEST),SRC_ALL += $(SRC_SUBDIR)/$(MODULE_NAME)/sim/$(SRC_FILE))
+
+######################################################################
 
 IVERILOG_DEFINES=-D__IVERILOG__ \
 				 -DTHREEWIRE_FOR_NFC \
@@ -88,6 +77,15 @@ all: $(SRC_COMMON) $(SRC_THREEWIRE)
 
 sim:
 	gtkwave test.lxt
+
+help:
+	@echo "Build verilog module + run simulation"
+	@echo "Usage make MODULE=<module-name>"
+	@echo "Current supported modules:"
+	@echo "-threewire_basic"
+	@echo "-threewire_burst"
+	@echo "-io_bitbang"
+
 
 .PHONY: clean
 clean:
