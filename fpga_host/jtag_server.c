@@ -106,7 +106,7 @@ int main(void)
      * go in sleep mode and will wait for the incoming connection
      */
     
-    printf("Starting listening on socket fd on port %u...\n", portno);
+    printf("Starting TCP server on port %u...\n", portno);
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
     
