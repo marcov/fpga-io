@@ -5,6 +5,7 @@ CFLAGS=-Wall -Wextra -L. -lftd2xx.1.2.2  -Wl,-rpath /usr/local/lib
 
 THREEWIRE_APP = fpga_3w_eval 
 IO_BB_APP     = fpga_io_bb_eval 
+JTAG_SERVER   = jtag_server
 
 all: $(THREEWIRE_APP) $(IO_BB_APP)
 
@@ -15,6 +16,15 @@ $(IO_BB_APP): main_io_bb.c
 	$(CC) main_io_bb.c fpga_common_api.c fpga_io_bb_api.c -o $(IO_BB_APP) $(CFLAGS) -O3 -g
 
 
+$(JTAG_SERVER): jtag_server.c 
+	$(CC) jtag_server.c fpga_common_api.c fpga_io_bb_api.c -o $(JTAG_SERVER) $(CFLAGS) -O3 -g
+
+
+
+
+
 clean:
 	rm -f *.o
 	rm -f $(THREEWIRE_APP) $(IO_BB_APP) 
+
+
