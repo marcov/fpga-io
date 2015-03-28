@@ -9,6 +9,7 @@
 
 #define FT2232H_CYCLE_PORT           0
 #define FT2232H_SET_TIMEOUTS         0
+#define FT2232H_SET_USB_PARAMS       0
 #define FT2232H_PORT_NUMBER          1U
 
 
@@ -47,7 +48,7 @@ FT_HANDLE fpga_usb_init(void)
         "If so, unload them using rmmod, as they conflict with ftd2xx.\n");
         return NULL;
     }
-
+    
     ftStatus = FT_GetDeviceInfo(
                                 ftHandle,
                                 &ftDevice,
@@ -111,7 +112,8 @@ FT_HANDLE fpga_usb_init(void)
     }
 
 #endif
-
+    
+#if (FT2232H_SET_USB_PARAMS == 1)
     ftStatus = FT_SetUSBParameters(ftHandle, 64, 64);
     if (ftStatus == FT_OK) {
          // Port has been reset
@@ -123,7 +125,8 @@ FT_HANDLE fpga_usb_init(void)
         (void)FT_Close(ftHandle);
         return NULL;
     }
-
+#endif
+    
 #if (FT2232H_SET_TIMEOUTS == 1)
     ftStatus = FT_SetTimeouts(ftHandle, 1000, 1000);
     if (ftStatus == FT_OK) {

@@ -11,6 +11,13 @@
 #include "fpga_common_api.h"
 #include "ftd2xx.h"
 
+#define BE_VERBOSE 0
+
+#if BE_VERBOSE
+#define LOG_JTAG(...) printf(__VA_ARGS__)
+#else
+#define LOG_JTAG(...)
+#endif
 
 enum
 {
@@ -42,14 +49,14 @@ static int init_usb_fpga(void)
     fprintf(stderr, "io bb set outval: %02X...\n", curr_outval);
     if (!fpga_io_bb_write(ftHandle, IO_BB_PARAM_OUTVAL, curr_outval))
     {
-        fprintf(stdout, "i bb set outval failed.\n");
+        fprintf(stdout, "bb set outval failed.\n");
         return -1;
     }
     
     fprintf(stderr, "io bb set direction: %02X...\n", dir_output);
     if (!fpga_io_bb_write(ftHandle, IO_BB_PARAM_DIRECTION, dir_output))
     {
-        fprintf(stdout, "i bb set direction failed.\n");
+        fprintf(stdout, "bb set direction failed.\n");
         return -1;
     }
     
@@ -107,7 +114,7 @@ int main(void)
      */
     
     printf("Starting TCP server on port %u...\n", portno);
-    listen(sockfd,5);
+    listen(sockfd, 0);
     clilen = sizeof(cli_addr);
     
     /* Accept actual connection from the client */
@@ -144,11 +151,9 @@ int main(void)
                     return -1;
                 }
                 
-                fprintf(stderr, "io bb read val: %02X\n", readval);
-               
-                val[0] = (readval > 0) ? '1' : '0';
+                val[0] = ((readval & IO_TDO) != 0) ? '1' : '0';
                 
-                printf("r tdo=%c\n", *val);
+                LOG_JTAG("r tdo=%c\n", *val);
 
                 /* Write a response to the client */
                 n = write(newsockfd, val , 1);
@@ -163,11 +168,11 @@ int main(void)
             }
                 
             case 'B':
-                printf(">> Blink on\n");
+                LOG_JTAG(">> Blink on\n");
                 break;
             
             case 'b':
-                printf(">> Blink off\n");
+                LOG_JTAG(">> Blink off\n");
                 break;
                 
                 
@@ -179,27 +184,28 @@ int main(void)
                 if (*buffer == 'r')
                 {
                     curr_outval &= ~(IO_TRST | IO_SRST);
-                    printf("reset srst=0 trst=0\n");
+                    LOG_JTAG("reset srst=0 trst=0\n");
                 }
                 else if (*buffer == 's')
                 {
                     curr_outval &= ~(IO_TRST);
                     curr_outval |= IO_SRST;
-                    printf("reset srst=1 trst=0\n");
+                    LOG_JTAG("reset srst=1 trst=0\n");
                 }
                 else if (*buffer == 't')
                 {
                     curr_outval &= ~(IO_SRST);
                     curr_outval |= IO_TRST;
-                    printf("reset srst=0 trst=1\n");
+                    LOG_JTAG("reset srst=0 trst=1\n");
                 }
                 else if (*buffer == 'u')
                 {
                     curr_outval |= (IO_TRST | IO_SRST);
-                    printf("reset srst=1 trst=1\n");
+                    LOG_JTAG("reset srst=1 trst=1\n");
                 }
                 
-                fprintf(stderr, "io bb set outval: %02X...\n", curr_outval);
+                curr_outval ^= (IO_TRST | IO_SRST);
+                LOG_JTAG("io bb set outval: %02X...\n", curr_outval);
                 if (!fpga_io_bb_write(ftHandle, IO_BB_PARAM_OUTVAL, curr_outval))
                 {
                     fprintf(stdout, "i bb set outval failed.\n");
@@ -215,7 +221,7 @@ int main(void)
                 
                 if (out < '0' && out > '7')
                 {
-                    printf("undetected command!");
+                    fprintf(stderr, "undetected command!");
                     return -1;
                 }
                 
@@ -248,10 +254,19 @@ int main(void)
                     curr_outval &= ~IO_TCK;
                 }
                 
-                printf("tdi=%u ",  (out & 0x01));
-                printf("tms=%u ",  (out & 0x02));
-                printf("tck=%u",   (out & 0x04));
-                printf("\n");
+                LOG_JTAG("tdi=%u ",  (out & 0x01) ? 1 : 0);
+                LOG_JTAG("tms=%u ",  (out & 0x02) ? 1 : 0);
+                LOG_JTAG("tck=%u",   (out & 0x04) ? 1 : 0);
+                LOG_JTAG("\n");
+                
+#if 0
+                fprintf(stderr, "io bb set outval: %02X...\n", curr_outval);
+#endif
+                if (!fpga_io_bb_write(ftHandle, IO_BB_PARAM_OUTVAL, curr_outval))
+                {
+                    fprintf(stdout, "bb set outval failed.\n");
+                    return -1;
+                }
                 
                 break;
             }
