@@ -42,7 +42,7 @@ typedef enum
 
 static uint8_t curr_outval;
 static int fd;
-static const char * ftdi_path = "/dev/tty.usbserial-000013FAA";
+static const char * ftdi_path = "/dev/ttyUSB1";
 
 static uint8_t write_pkt[] = {IO_BB_CMD_WRITE, 0x00, 0x00};
 static uint8_t read_pkt[] = {IO_BB_CMD_READ};
@@ -53,7 +53,7 @@ static int init_usb_fpga(void)
 {
     uint8_t dir_output;
     
-    fprintf(stderr, "usb init...\n");
+    fprintf(stderr, "usb init %s...\n", ftdi_path);
     if ((fd = open(ftdi_path, O_RDWR)) < 0)
     {
         perror("Serial port open failed");
@@ -72,7 +72,6 @@ static int init_usb_fpga(void)
         fprintf(stdout, "bb set outval failed.\n");
         return -1;
     }
-
     if (read(fd, readval, 1) != 1)
     {
         perror("read failed...\n");
@@ -177,7 +176,6 @@ int main(void)
             case 'R':
             {
                 
-                fprintf(stderr, "io bb set outval: %02X...\n", curr_outval);
                 if (write(fd, read_pkt, sizeof(read_pkt)) != sizeof(read_pkt))
                 {
                     fprintf(stdout, "bb set outval failed.\n");
@@ -266,9 +264,16 @@ int main(void)
    
             default:
             {
-                char out = *buffer;
-                
-                if (out < '0' && out > '7')
+				char out = *buffer;
+                static uint32_t write_ctr = 0;
+               
+			    write_ctr++;
+				if ((write_ctr & 0x3FF) == 0)
+				{
+					printf("Written: %u bits\n", write_ctr);
+				}
+				
+				if (out < '0' && out > '7')
                 {
                     fprintf(stderr, "undetected command!");
                     return -1;
@@ -307,9 +312,11 @@ int main(void)
                 LOG_JTAG("tms=%u ",  (out & 0x02) ? 1 : 0);
                 LOG_JTAG("tck=%u",   (out & 0x04) ? 1 : 0);
                 LOG_JTAG("\n");
-                
+               
+#if 0
                 fprintf(stderr, "io bb set outval: %02X...\n", curr_outval);
-                write_pkt[1] = IO_BB_PARAM_OUTVAL;
+#endif
+	 			write_pkt[1] = IO_BB_PARAM_OUTVAL;
                 write_pkt[2] = curr_outval;
                 if (write(fd, write_pkt, sizeof(write_pkt)) != sizeof(write_pkt))
                 {
