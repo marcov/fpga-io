@@ -1,0 +1,10 @@
+#
+# Connector is J1, starting from 2nd pin (1st pin is GND)
+#
+
+TDI  = 0 // 2nd pin 
+TMS  = 1 // 3rd pin
+TCK  = 2 // ...
+TRST = 3
+SRST = 4
+TDO  = 5
