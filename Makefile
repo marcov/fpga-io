@@ -10,7 +10,7 @@ OBJS = $(SRCS:%.v=%.$(OBJ_EXT))
 SRC_SUBDIR = src
 SIM_SUBDIR = sim
 
-MODULES_LIST = threewire_basic threewire_burst io_bitbang
+MODULES_LIST = threewire_basic threewire_burst io_bitbang i2c_slave
 
 CURR_DIR = $(shell pwd)
 
@@ -61,6 +61,9 @@ $(info )
 
 SRC_ALL += $(SRC_AUTO)
 
+$(info src ALL: "$(SRC_ALL)")
+$(info )
+$(info )
 ######################################################################
 
 IVERILOG_DEFINES=-D__IVERILOG__ \
@@ -77,7 +80,7 @@ IVERILOG_DEFINES += \
 
 #Generates a vvp file from the passed target name (source code name without .v)
 %:
-	iverilog $(IVERILOG_DEFINES) -o $*.vvp $*.v $*_test.v $(SRC_TO_ADD)
+	iverilog $(IVERILOG_DEFINES) -o $*.vvp src/$(MODULE_NAME)/$*.v src/$(MODULE_NAME)/$*_test.v
 	vvp $*.vvp -lxt2
 
 all: $(SRC_COMMON) $(SRC_THREEWIRE)
