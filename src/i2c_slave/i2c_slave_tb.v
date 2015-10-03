@@ -6,7 +6,7 @@ module i2c_slave_tb;
     reg  scl;
     wire sda;
     reg  sda_out;
-    wire slave_sda_dir;
+    wire slave_sda_oe;
     reg  enable_scl;
     reg  slave_ack;
     reg [7:0] read_byte;
@@ -30,7 +30,7 @@ module i2c_slave_tb;
                   .in_rst_n(rst_n),
                   .in_scl(scl),
                   .io_sda(sda),
-                  .out_sda_dir(slave_sda_dir));
+                  .out_sda_dir(slave_sda_oe));
 
 
     //66MHz
@@ -58,11 +58,12 @@ module i2c_slave_tb;
 		#50
 		rst_n = 1;
         
-        //i2c_read_transaction(4);
-        //#100
+        i2c_read_transaction(4);
+        #200
 
-        i2c_write_transaction(2, 'hAA);
+        i2c_write_transaction(4, 'hAA);
 
+        #200
         i2c_write_transaction(2, 'hBB);
 
         #1000
