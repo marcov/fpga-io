@@ -1,10 +1,17 @@
 
 
-module i2c_slave(input      in_clk,
-                 input      in_rst_n,
-                 input      in_scl,
-                 inout      io_sda,
-                 output reg out_sda_dir);
+module i2c_slave
+#(
+    parameter MEM_ADDR_WIDTH = 16,
+    parameter MEM_DATA_WIDTH = 8
+)
+(   input      in_clk,
+    input      in_rst_n,
+    input      in_scl,
+    inout      io_sda,
+    output reg out_sda_dir,
+    output     [MEM_ADDR_WIDTH - 1 : 0] out_mem_addr,
+    input      [MEM_DATA_WIDTH - 1 : 0] in_mem_data);
 
     
     localparam STATE_IDLE             = 0,
@@ -17,7 +24,7 @@ module i2c_slave(input      in_clk,
 
     localparam SDA_SETUP_DELAY        = 3;
 
-    reg [15 : 0] addr_register;
+    reg [MEM_ADDR_WIDTH - 1 : 0] addr_register;
     reg          out_sda;
     reg [4 : 0]  state;
     reg [4 : 0]  next_state;
@@ -36,6 +43,7 @@ module i2c_slave(input      in_clk,
 
     wire in_sda = !(io_sda === 'b0);
 
+    assign out_mem_addr = addr_register;
 
 	 /* Combinatorial logic for state(t+1) */
     always @ (state,
@@ -186,7 +194,12 @@ module i2c_slave(input      in_clk,
                         begin
                             rx_byte_upctr <= rx_byte_upctr + 1;
 
-                            if (rx_byte_upctr < 2) addr_register <= addr_register | (rx_byte << (8 * rx_byte_upctr));
+                            case (rx_byte_upctr)
+                                0:
+                                    addr_register[15 : 8] <= rx_byte;
+                                1:
+                                    addr_register[7 : 0]  <= rx_byte;
+                            endcase
                         end
                     end
                     
@@ -198,8 +211,9 @@ module i2c_slave(input      in_clk,
 
                     STATE_TX_DATA:
                     begin
-                        tx_byte    <= 'hAA;
-                        tx_bit_ctr <= 8;
+                        tx_byte       <= in_mem_data;
+                        addr_register <= addr_register + 1;
+                        tx_bit_ctr    <= 8;
                     end
 
                 endcase

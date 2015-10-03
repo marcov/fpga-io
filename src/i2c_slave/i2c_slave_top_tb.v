@@ -1,37 +1,37 @@
 
 `timescale 1ns / 1ps
 
-module i2c_slave_tb;
 
+module i2c_slave_top_testbench;
     reg  scl;
     wire sda;
     reg  sda_out;
     wire slave_sda_oe;
     reg  enable_scl;
     reg  slave_ack;
-    reg [7:0] read_byte;
     reg       ack;
 
     reg  clk;
     reg  rst_n;
     integer i;
+    reg [7:0] wr_buffer [7:0];
+    reg [7:0] rd_buffer [7:0];
+    integer mem_offset;
+
 
     // SDA_OUT = 1 => high impedance.
     // SDA_OUT = 0 =>  drive SDA low.
-
     assign sda = sda_out ? 1'bz: 'b0;
     
     wire sda_in;
 
     assign sda_in = !(sda === 0);
 
-    i2c_slave iut_i2c_slave 
-                 (.in_clk(clk),
-                  .in_rst_n(rst_n),
-                  .in_scl(scl),
-                  .io_sda(sda),
-                  .out_sda_dir(slave_sda_oe));
-
+    i2c_slave_top i2c_slave_top_iut(
+                              .in_ext_osc(clk),
+                              .in_reset_n(rst_n),
+                              .in_scl(scl),
+                              .io_sda(sda));
 
     //66MHz
 	always #7.5 clk = !clk; 
@@ -40,8 +40,8 @@ module i2c_slave_tb;
 
     initial
     begin
-        $dumpfile("i2c_slave_tb.lxt");
-        $dumpvars(0, i2c_slave_tb);
+        $dumpfile("i2c_slave_top_tb.lxt");
+        $dumpvars(0, i2c_slave_top_testbench);
 
 		// Initialize 
 		#0
@@ -50,7 +50,6 @@ module i2c_slave_tb;
         sda_out    = 1;
         scl        = 1;
         enable_scl = 0;
-        read_byte  = 0;
 
 		#10
 		rst_n = 0;
@@ -58,13 +57,44 @@ module i2c_slave_tb;
 		#50
 		rst_n = 1;
         
+        #200
+        wr_buffer[0] = 'h00;
+        wr_buffer[1] = 'h01;
+        mem_offset = (wr_buffer[0] << 8) | wr_buffer[1];
+        i2c_write_transaction(2);
+
         i2c_read_transaction(4);
-        #200
+        
+        for (i = 0; i < 4; i = i + 1)
+        begin            
+            if (rd_buffer[i] != i2c_slave_top_iut.rom_mem_inst.mem[mem_offset + i])
+            begin
+                $display("======= ERROR ======= ");
+                $display("Read data mismatch: rd=%x - expected=%x", 
+                         rd_buffer[i], i2c_slave_top_iut.rom_mem_inst.mem[mem_offset + i]);
+                $finish;        
+            end    
+        end
 
-        i2c_write_transaction(4, 'hAA);
 
         #200
-        i2c_write_transaction(2, 'hBB);
+        wr_buffer[0] = 'hAA;
+        wr_buffer[1] = 'hCC;
+        mem_offset = (wr_buffer[0] << 8) | wr_buffer[1];
+        i2c_write_transaction(2);
+
+        i2c_read_transaction(8);
+
+        for (i = 0; i < 4; i = i + 1)
+        begin            
+            if (rd_buffer[i] != i2c_slave_top_iut.rom_mem_inst.mem[mem_offset + i])
+            begin
+                $display("======= ERROR ======= ");
+                $display("Read data mismatch: rd=%x - expected=%x", 
+                         rd_buffer[i], i2c_slave_top_iut.rom_mem_inst.mem[mem_offset + i]);
+                $finish;        
+            end    
+        end
 
         #1000
         $finish;
@@ -83,8 +113,8 @@ module i2c_slave_tb;
         for (i = 0; i < nbytes; i = i + 1)
         begin
             // Nack last read
-            i2c_ll_read_byte( (i + 1 == nbytes) ? 1 : 0, read_byte);
-            $display("Read byte is %x", read_byte);
+            i2c_ll_read_byte( (i + 1 == nbytes) ? 1 : 0, rd_buffer[i]);
+            $display("Read byte is %x", rd_buffer[i]);
         end
 
         I2C_Stop();
@@ -93,7 +123,6 @@ module i2c_slave_tb;
 
     task i2c_write_transaction;
         input [7:0] nbytes;
-        input [7:0] wrbyte;
     begin
         $display("I2C write transaction nbytes=%d", nbytes);
         i2c_ll_start_cond();
@@ -104,7 +133,7 @@ module i2c_slave_tb;
         for (i = 0; i < nbytes; i = i + 1)
         begin
             // Nack last read
-            i2c_ll_write_byte( ack, wrbyte);
+            i2c_ll_write_byte( ack, wr_buffer[i]);
             $display("Write byte, ACK is %x", ack);
         end
 

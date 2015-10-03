@@ -3,9 +3,12 @@
 
 MODULE_NAME := i2c_slave
 
-SRCS := $(MODULE_NAME).v $(MODULE_NAME)_tb.v
+SRCS := $(MODULE_NAME).v \
+        $(MODULE_NAME)_top.v \
+        $(MODULE_NAME)_top_tb.v \
+        ../rom_lut.v
 
-OBJS :=  $(MODULE_NAME)_tb.vvp
+OBJS :=  $(MODULE_NAME)_top_tb.vvp
 
 WAVEFILE := $(OBJS:.vvp=.lxt)
 
@@ -13,7 +16,7 @@ $(info $(WAVEFILE) -- $(OBJS) -- $(SRCS))
 
 
 .PHONY: wave
-wave:	all
+wave: all
 	gtkwave $(WAVEFILE)
 
 .PHONY: all
