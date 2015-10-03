@@ -6,7 +6,7 @@ module i2c_slave(input      in_clk,
                  inout      io_sda,
                  output reg out_sda_dir);
 
-
+    
     localparam STATE_IDLE             = 0,
                STATE_WAIT_I2C_ADDR    = 1,
                STATE_WAIT_DATA_BYTE   = 2,
@@ -14,6 +14,8 @@ module i2c_slave(input      in_clk,
                STATE_TX_DATA          = 5,
                STATE_WAIT_ACK         = 6,
                STATE_TX_ACK           = 7;
+
+    localparam SDA_SETUP_DELAY        = 3;
 
     reg [15 : 0] addr_register;
     reg          out_sda;
@@ -27,6 +29,8 @@ module i2c_slave(input      in_clk,
     reg          flag_start_det;
     reg          flag_stop_det;
     reg          flag_rw;
+    reg [7 : 0]  dly_upctr;
+    reg          flag_oe;
 
     assign io_sda = out_sda_dir && !out_sda ? 1'b0 : 1'bz;
 
@@ -72,9 +76,19 @@ module i2c_slave(input      in_clk,
 
                 STATE_TX_ACK:
                 begin
-                    if (tx_bit_ctr == 0 && !out_sda_dir)
+                    if (tx_bit_ctr == 0)
                     begin
-                        next_state = flag_rw ? STATE_TX_DATA : STATE_WAIT_DATA_BYTE;
+                        if (flag_rw)
+                        begin
+                            next_state = STATE_TX_DATA;
+                        end
+                        else if (flag_oe == 0 && out_sda_dir == 0) 
+                        begin
+                            // We have to delay transition to next state at the end of ack
+                            // bit transmission, i.e. falling edge of SCL after ACK BIT, where
+                            // OE is disabled.
+                            next_state = STATE_WAIT_DATA_BYTE;
+                        end
                     end
                 end
                
@@ -122,6 +136,8 @@ module i2c_slave(input      in_clk,
             rx_byte_upctr  <= 0;
             flag_start_det <= 0;
             flag_stop_det  <= 0;
+            flag_oe        <= 0;
+            dly_upctr      <= 0;
         end
         else
         begin
@@ -129,6 +145,25 @@ module i2c_slave(input      in_clk,
             if (flag_start_det)  flag_start_det <= 0;
             if (flag_stop_det)   flag_stop_det  <= 0;
            
+            if (flag_oe)
+            begin
+                dly_upctr <= 1;
+                flag_oe  <= 0;
+            end
+
+            // SDA delayed setup time.
+            if (dly_upctr > 0)
+            begin
+                dly_upctr <= dly_upctr + 1;
+
+                if (dly_upctr >= SDA_SETUP_DELAY)
+                begin
+                    out_sda_dir <= 1;
+                    dly_upctr   <= 0;
+                    flag_oe     <= 0;
+                end
+            end
+
             state <= next_state;
 
             // On state change
@@ -210,7 +245,8 @@ module i2c_slave(input      in_clk,
         begin
             out_sda     <= (tx_byte >> (tx_bit_ctr - 1));
             tx_bit_ctr  <= tx_bit_ctr - 1;
-            out_sda_dir <= 1;
+            // Output enabled with delayed setup time
+            if (out_sda_dir == 0)  flag_oe <= 1;
         end
         else
         begin
