@@ -1,37 +1,50 @@
-
+#
+#
+#
 
 
 MODULE_NAME := i2c_slave
 
+
+OBJS_DIR := build
+SIM_DIR  := sim
+
 SRCS := $(MODULE_NAME).v \
         $(MODULE_NAME)_top.v \
-        $(MODULE_NAME)_top_tb.v \
+        $(SIM_DIR)/$(MODULE_NAME)_top_tb.v \
         ../rom_lut.v
 
 OBJS :=  $(MODULE_NAME)_top_tb.vvp
 
 WAVEFILE := $(OBJS:.vvp=.lxt)
 
-$(info $(WAVEFILE) -- $(OBJS) -- $(SRCS))
+$(info WAVEFILE = $(WAVEFILE))
+$(info OBJS     = $(OBJS))
+$(info SRCS     = $(SRCS))
 
 
 .PHONY: wave
 wave: all
-	gtkwave $(WAVEFILE)
+	gtkwave $(OBJS_DIR)/$(WAVEFILE)
 
 .PHONY: all
 all: $(OBJS)
 
 .SECONDEXPANSION:
-$(OBJS):
+$(OBJS): $(OBJS_DIR)
 	@echo "Making..."
-	iverilog -o $@ $(SRCS)
-	vvp $@ -lxt2
+	iverilog -o $(OBJS_DIR)/$@ $(SRCS)
+	vvp build/$@ -lxt2
+	mv $(WAVEFILE) $(OBJS_DIR)
 	@echo "OK"
 
 
+.SECONDEXPANSION:
+$(OBJS_DIR):
+	 mkdir -p $(OBJS_DIR)
+	
 .PHONY: clean
 clean:
 	@echo "Cleaning..."
-	@rm -f *.vvp *.lxt
+	@rm -rf $(OBJS_DIR)
 	@echo "OK" 

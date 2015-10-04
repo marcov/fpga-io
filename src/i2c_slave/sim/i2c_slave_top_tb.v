@@ -14,9 +14,8 @@ module i2c_slave_top_testbench;
     reg  clk;
     reg  rst_n;
     integer i;
-    reg [7:0] wr_buffer [7:0];
-    reg [7:0] rd_buffer [7:0];
-    integer mem_offset;
+    reg [7:0] wr_buffer ['hFFFF : 0];
+    reg [7:0] rd_buffer ['hFFFF : 0];
 
 
     // SDA_OUT = 1 => high impedance.
@@ -43,6 +42,8 @@ module i2c_slave_top_testbench;
         $dumpfile("i2c_slave_top_tb.lxt");
         $dumpvars(0, i2c_slave_top_testbench);
 
+        $display("\n\n============= SIMULATION STARTED ==============");
+
 		// Initialize 
 		#0
 		clk        = 0;
@@ -58,63 +59,66 @@ module i2c_slave_top_testbench;
 		rst_n = 1;
         
         #200
-        wr_buffer[0] = 'h00;
-        wr_buffer[1] = 'h01;
-        mem_offset = (wr_buffer[0] << 8) | wr_buffer[1];
-        i2c_write_transaction(2);
-
-        i2c_read_transaction(4);
-        
-        for (i = 0; i < 4; i = i + 1)
-        begin            
-            if (rd_buffer[i] != i2c_slave_top_iut.rom_mem_inst.mem[mem_offset + i])
-            begin
-                $display("======= ERROR ======= ");
-                $display("Read data mismatch: rd=%x - expected=%x", 
-                         rd_buffer[i], i2c_slave_top_iut.rom_mem_inst.mem[mem_offset + i]);
-                $finish;        
-            end    
-        end
-
+        eeprom_read_at_address('h0001, 4);
+        $display("\n===============================\n");
 
         #200
-        wr_buffer[0] = 'hAA;
-        wr_buffer[1] = 'hCC;
-        mem_offset = (wr_buffer[0] << 8) | wr_buffer[1];
-        i2c_write_transaction(2);
-
-        i2c_read_transaction(8);
-
-        for (i = 0; i < 4; i = i + 1)
-        begin            
-            if (rd_buffer[i] != i2c_slave_top_iut.rom_mem_inst.mem[mem_offset + i])
-            begin
-                $display("======= ERROR ======= ");
-                $display("Read data mismatch: rd=%x - expected=%x", 
-                         rd_buffer[i], i2c_slave_top_iut.rom_mem_inst.mem[mem_offset + i]);
-                $finish;        
-            end    
-        end
+        eeprom_read_at_address('hAACC, 8);
+        $display("\n===============================\n");
+        
+        
+        #200
+        eeprom_read_at_address('h0000, 'h10000);
+        $display("\n===============================\n");
 
         #1000
+        $display("\n\n============= SIMULATION ENDED OK! ==============");
         $finish;
     end
 
 
-    task i2c_read_transaction;
-        input [7:0] nbytes;
+    task eeprom_read_at_address;
+        input integer eeprom_offset;
+        input integer read_len;
     begin
-        $display("I2C read transaction nbytes=%d", nbytes);
+        wr_buffer[0] = eeprom_offset[15:8];
+        wr_buffer[1] = eeprom_offset[7:0];
+        
+        i2c_write_transaction(2);
+
+        i2c_read_transaction(read_len);
+       
+        // Verify read data
+        for (i = 0; i < read_len; i = i + 1)
+        begin            
+            if (rd_buffer[i] !== i2c_slave_top_iut.rom_mem_inst.mem[eeprom_offset + i])
+            begin
+                $display("======= ERROR ======= ");
+                $display("Read data mismatch: rd=%x - expected=%x", 
+                         rd_buffer[i], i2c_slave_top_iut.rom_mem_inst.mem[eeprom_offset + i]);
+                $finish;        
+            end    
+        end
+        
+        $display("======= ROM DATA VERIFY OK! ======= ");
+    end
+    endtask
+
+
+    task i2c_read_transaction;
+        input integer nbytes;
+    begin
+        $display("= I2C read transaction nbytes=%d", nbytes);
         i2c_ll_start_cond();
         
         i2c_ll_wr_i2c_address('h50, 1, slave_ack);
-        $display("Ack is %d", slave_ack);
+        $display("=== I2C addr ack is %d", slave_ack);
        
         for (i = 0; i < nbytes; i = i + 1)
         begin
             // Nack last read
             i2c_ll_read_byte( (i + 1 == nbytes) ? 1 : 0, rd_buffer[i]);
-            $display("Read byte is %x", rd_buffer[i]);
+            $display("=== read byte=%02X", rd_buffer[i]);
         end
 
         I2C_Stop();
@@ -122,19 +126,19 @@ module i2c_slave_top_testbench;
     endtask
 
     task i2c_write_transaction;
-        input [7:0] nbytes;
+        input integer nbytes;
     begin
-        $display("I2C write transaction nbytes=%d", nbytes);
+        $display("= I2C write transaction nbytes=%d", nbytes);
         i2c_ll_start_cond();
         
         i2c_ll_wr_i2c_address('h50, 0, slave_ack);
-        $display("Ack is %d", slave_ack);
+        $display("=== I2C addr ack is %d", slave_ack);
        
         for (i = 0; i < nbytes; i = i + 1)
         begin
             // Nack last read
             i2c_ll_write_byte( ack, wr_buffer[i]);
-            $display("Write byte, ACK is %x", ack);
+            $display("=== written byte=%02X, ACK is %x", wr_buffer[i], ack);
         end
 
         I2C_Stop();
@@ -233,14 +237,17 @@ module i2c_slave_top_testbench;
         
         read_byte = 0;
 
+        $write("==== SDA bits:");
+        
         //Get a full byte
         for (i = 0; i < 8; i = i + 1) 
         begin
             wait(scl == 0);
             wait(scl);
             read_byte[7 - i] = sda_in;
-            $display("== %b",sda_in);
+            $write (" %b",sda_in);
         end
+        $write("\n");
 
         //send ACK
         wait(scl == 0);
@@ -259,15 +266,17 @@ module i2c_slave_top_testbench;
         input [7 : 0] write_byte;
     begin : tx_addr_proc
         integer i;
-        
+       
+        $write("==== SDA bits:");
         //Write a full byte
         for (i = 0; i < 8; i = i + 1) 
         begin
             wait(scl == 0);
             sda_out = write_byte[7 - i];
-            $display("== %b",sda_out);
+            $write("  %b",sda_out);
             wait(scl);
         end
+        $write("\n");
 
         //Release line
         wait(scl == 0);
