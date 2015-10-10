@@ -29,8 +29,8 @@ module i2c_slave_top_testbench;
     i2c_slave_top i2c_slave_top_iut(
                               .in_ext_osc(clk),
                               .in_reset_n(rst_n),
-                              .in_scl(scl),
-                              .io_sda(sda));
+                              .in_i2c_scl(scl),
+                              .io_i2c_sda(sda));
 
     //66MHz
 	always #7.5 clk = !clk; 

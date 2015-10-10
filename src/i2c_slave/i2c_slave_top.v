@@ -10,20 +10,23 @@ module i2c_slave_top
     parameter TOP_SDA_SETUP_DELAY_CYCLES = `I2C_SLAVE_SDA_DELAY_CYCLES)
    (input in_ext_osc,
     input in_reset_n,
-    input in_scl,
-    inout io_sda);
+    input in_i2c_scl,
+    inout io_i2c_sda);
 
 	wire slave_sda_oe;
 	wire [TOP_ROM_MEM_ADDR_WIDTH - 1 : 0] rom_addr;
 	wire [TOP_ROM_MEM_DATA_WIDTH - 1 : 0] rom_data;
+    wire in_reset_p;
 
-   i2c_slave #(.MEM_ADDR_WIDTH(TOP_ROM_MEM_ADDR_WIDTH),
-               .MEM_DATA_WIDTH(TOP_ROM_MEM_DATA_WIDTH),
-               .SDA_SETUP_DELAY_CYCLES(TOP_SDA_SETUP_DELAY_CYCLES))
-        i2c_slave_inst (.in_clk(in_ext_osc),
+    assign in_reset_p    = !in_reset_n;
+    
+    i2c_slave #(.MEM_ADDR_WIDTH(TOP_ROM_MEM_ADDR_WIDTH),
+                .MEM_DATA_WIDTH(TOP_ROM_MEM_DATA_WIDTH),
+                .SDA_SETUP_DELAY_CYCLES(TOP_SDA_SETUP_DELAY_CYCLES))
+        i2c_slave_inst (.in_clk(clk_top_main),
                         .in_rst_n(in_reset_n),
-                        .in_scl(in_scl),
-                        .io_sda(io_sda),
+                        .in_scl(in_i2c_scl),
+                        .io_sda(io_i2c_sda),
                         .out_sda_oe(slave_sda_oe),
                         .out_mem_addr(rom_addr),
                         .in_mem_data(rom_data));
@@ -31,9 +34,16 @@ module i2c_slave_top
 
     rom_lookup_table #(.ROM_ADDR_WIDTH(TOP_ROM_MEM_ADDR_WIDTH),
                        .ROM_DATA_WIDTH(TOP_ROM_MEM_DATA_WIDTH)) 
-		rom_mem_inst (.in_clk(in_ext_osc),
+		rom_mem_inst (.in_clk(clk_top_main),
  				 	  .in_addr(rom_addr),
  				 	  .out_data(rom_data));
+
+    // Instantiation of clockgen
+    clockgen clkgen (
+        .CLKIN_IN        (in_ext_osc), 
+        .RST_IN          (in_reset_p), 
+        .CLK0_OUT        (clk_top_main) 
+        );
 
 endmodule
 
