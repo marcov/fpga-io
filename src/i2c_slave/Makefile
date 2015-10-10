@@ -12,7 +12,9 @@ SIM_DIR  := sim
 SRCS := $(MODULE_NAME).v \
         $(MODULE_NAME)_top.v \
         $(SIM_DIR)/$(MODULE_NAME)_top_tb.v \
-        ../rom_lut.v
+        ../rom_lut.v                       \
+		../sim/clockgen_model.v            \
+
 
 OBJS :=  $(MODULE_NAME)_top_tb.vvp
 
