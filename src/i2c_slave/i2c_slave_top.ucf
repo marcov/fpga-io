@@ -1,0 +1,23 @@
+####
+CONFIG ENABLE_SUSPEND = "NO";
+
+
+########### IO constraints
+#LED
+
+# NET "out_led" LOC = T10;
+# NET "out_led" IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;
+
+#RESET
+NET "in_reset_n" LOC = R13;
+NET "in_reset_n" IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE;
+
+#External oscillator
+NET "in_ext_osc" LOC = R9;
+NET "in_ext_osc" IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE; 
+
+
+#I2C
+NET "io_i2c_sda"    LOC = D11 | SLEW = FAST | DRIVE = 4;
+NET "in_i2c_scl"    LOC = D9 | SLEW = FAST | DRIVE = 4;
+NET "*_i2c_*"       IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;
