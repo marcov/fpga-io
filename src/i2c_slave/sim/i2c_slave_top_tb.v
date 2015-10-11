@@ -68,7 +68,7 @@ module i2c_slave_top_testbench;
         
         
         #200
-        eeprom_read_at_address('h0000, 'h10000);
+        eeprom_read_at_address('h0000, 'h10);
         $display("\n===============================\n");
 
         #1000
@@ -112,8 +112,14 @@ module i2c_slave_top_testbench;
         i2c_ll_start_cond();
         
         i2c_ll_wr_i2c_address('h50, 1, slave_ack);
-        $display("=== I2C addr ack is %d", slave_ack);
-       
+        $display("=== I2C addr ACK is %d", slave_ack);
+        
+        if (slave_ack)
+        begin
+            $display("Error: expected ACK value 0!");
+            $finish;
+        end
+
         for (i = 0; i < nbytes; i = i + 1)
         begin
             // Nack last read
@@ -132,13 +138,26 @@ module i2c_slave_top_testbench;
         i2c_ll_start_cond();
         
         i2c_ll_wr_i2c_address('h50, 0, slave_ack);
-        $display("=== I2C addr ack is %d", slave_ack);
+        $display("=== I2C addr ACK is %d", slave_ack);
        
+        if (slave_ack)
+        begin
+            $display("Error: expected ACK value 0!");
+            $finish;
+        end
+
         for (i = 0; i < nbytes; i = i + 1)
         begin
             // Nack last read
-            i2c_ll_write_byte( ack, wr_buffer[i]);
-            $display("=== written byte=%02X, ACK is %x", wr_buffer[i], ack);
+            i2c_ll_write_byte( slave_ack, wr_buffer[i]);
+            $display("=== written byte=%02X, ACK is %x", wr_buffer[i], slave_ack);
+    
+            if (slave_ack)
+            begin
+                $display("Error: expected ACK value 0!");
+                $finish;
+            end
+
         end
 
         I2C_Stop();

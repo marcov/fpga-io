@@ -28,7 +28,15 @@ module i2c_slave
     reg [4 : 0]  state;
     reg [4 : 0]  next_state;
     reg [4 : 0]  rx_bit_ctr;
-    reg [4 : 0]  tx_bit_ctr;
+    
+    reg [4 : 0]  tx_bit_idx;
+    reg [4 : 0]  tx_bit_num;
+
+    reg          prev_scl;
+    wire         curr_scl;  
+
+    reg          prev_sda;
+
     reg [7 : 0]  rx_byte;
     reg [7 : 0]  rx_byte_upctr;
     reg [7 : 0]  tx_byte;
@@ -44,15 +52,20 @@ module i2c_slave
 
     assign out_mem_addr = addr_register;
 
+    assign curr_scl = !(in_scl === 'b0);
+
 	 /* Combinatorial logic for state(t+1) */
     always @ (state,
               rx_bit_ctr,
-              tx_bit_ctr,
+              tx_bit_idx,
+              tx_bit_num,
               flag_rw,
               flag_start_det,
               flag_stop_det,
               rx_byte,
-              out_sda_oe) 
+              out_sda_oe,
+              flag_oe,
+              dly_upctr) 
     begin: next_state_logic
         /* Set a default state to avoid latches creation */
         next_state = state;
@@ -83,13 +96,13 @@ module i2c_slave
 
                 STATE_TX_ACK:
                 begin
-                    if (tx_bit_ctr == 0)
-                    begin
+                    if (tx_bit_idx >= 1)
+                    begin 
                         if (flag_rw)
                         begin
                             next_state = STATE_TX_DATA;
                         end
-                        else if (flag_oe == 0 && out_sda_oe == 0) 
+                        else 
                         begin
                             // We have to delay transition to next state at the end of ack
                             // bit transmission, i.e. falling edge of SCL after ACK BIT, where
@@ -109,7 +122,7 @@ module i2c_slave
 
                 STATE_TX_DATA:
                 begin
-                    if (tx_bit_ctr == 0 && !out_sda_oe)
+                    if (tx_bit_idx >= 8)
                     begin
                         next_state = STATE_WAIT_ACK;
                     end
@@ -136,7 +149,6 @@ module i2c_slave
             out_sda_oe     <= 0;
             out_sda        <= 1;
             rx_bit_ctr     <= 0;
-            tx_bit_ctr     <= 0;
             state          <= STATE_IDLE;
             next_state     <= STATE_IDLE;
             rx_byte        <= 0;
@@ -145,18 +157,57 @@ module i2c_slave
             flag_stop_det  <= 0;
             flag_oe        <= 0;
             dly_upctr      <= 0;
+
+            prev_scl       <= 0;
+            prev_sda       <= 1;
         end
         else
         begin
-            // Reset start/stop flags
-            if (flag_start_det)  flag_start_det <= 0;
-            if (flag_stop_det)   flag_stop_det  <= 0;
-           
+            prev_scl <= curr_scl;
+            prev_sda <= in_sda;
+
+            // START / STOP detection...
+            if (prev_scl == 1 && curr_scl == 1)
+            begin
+                flag_start_det <= (prev_sda == 1 && in_sda == 0);
+                flag_stop_det  <= (prev_sda == 0 && in_sda == 1);                
+            end
+
+            if (prev_scl != curr_scl)
+            begin
+                // Reception on raising edge
+                if (curr_scl &&
+                    (state == STATE_WAIT_I2C_ADDR ||
+                     state == STATE_WAIT_DATA_BYTE || 
+                     state == STATE_WAIT_ACK))
+                    begin
+                        rx_byte    <= (rx_byte << 1) | in_sda;
+                        rx_bit_ctr <= rx_bit_ctr + 1;
+                    end
+
+                // Transmission on falling edge
+                if (!curr_scl)
+                begin
+                    if (tx_bit_idx < tx_bit_num) 
+                    begin
+                        out_sda     <= tx_byte[7 - tx_bit_idx];
+                        tx_bit_idx  <= tx_bit_idx + 1;
+
+                        // Output Enable will be set with a delay, using flag_oe.
+                        if (out_sda_oe == 0)    flag_oe <= 1;
+                    end
+                    else
+                    begin
+                        out_sda_oe <= 0;
+                    end      
+                end
+            end
+
             // NOTE: can set output enabled only when SDA is not being pulled by master!
             if (flag_oe && in_sda)
             begin
                 dly_upctr <= 1;
-                flag_oe  <= 0;
+                flag_oe   <= 0;
             end
 
             // SDA delayed setup time.
@@ -168,38 +219,51 @@ module i2c_slave
                 begin
                     out_sda_oe  <= 1;
                     dly_upctr   <= 0;
-                    flag_oe     <= 0;
                 end
             end
+                
 
-            state <= next_state;
-
-            // On state change
+            // If state needs to change.
             if (state != next_state)
             begin
+
+                if (state == STATE_TX_ACK || state == STATE_TX_DATA)
+                begin
+                    // Do the change only on posedge...
+                    if (curr_scl)  state <= next_state;
+                end
+                else
+                    state <= next_state;
+
                 case (next_state)
                     
                     STATE_TX_ACK:
                     begin
-                        tx_bit_ctr <= 1;
-                        tx_byte    <= 0;
-                       
-                        if (state == STATE_WAIT_I2C_ADDR && (flag_rw == 0))
+                        // Do it when state effectively changes (see above...)
+                        if (curr_scl)
                         begin
-                            // Not optimal, should not reset the register content in case master does not write...
-                            rx_byte_upctr <= 0;
-                            addr_register <= 0;
-                        end
-                        if (state == STATE_WAIT_DATA_BYTE)
-                        begin
-                            rx_byte_upctr <= rx_byte_upctr + 1;
+                            
+                            tx_bit_num <= 1;
+                            tx_bit_idx <= 0;
+                            tx_byte    <= 0;
 
-                            case (rx_byte_upctr)
-                                0:
-                                    addr_register[15 : 8] <= rx_byte;
-                                1:
-                                    addr_register[7 : 0]  <= rx_byte;
-                            endcase
+                            if (state == STATE_WAIT_I2C_ADDR && (flag_rw == 0))
+                            begin
+                                // Not optimal, should not reset the register content in case master does not write...
+                                rx_byte_upctr <= 0;
+                                addr_register <= 0;
+                            end
+                            if (state == STATE_WAIT_DATA_BYTE)
+                            begin
+                                rx_byte_upctr <= rx_byte_upctr + 1;
+
+                                case (rx_byte_upctr)
+                                    0:
+                                        addr_register[15 : 8] <= rx_byte;
+                                    1:
+                                        addr_register[7 : 0]  <= rx_byte;
+                                endcase
+                            end
                         end
                     end
                     
@@ -207,65 +271,27 @@ module i2c_slave
                     begin
                         rx_byte    <= 0;
                         rx_bit_ctr <= 0;
+
+                        tx_bit_num <= 0;
                     end
 
                     STATE_TX_DATA:
                     begin
-                        tx_byte       <= in_mem_data;
-                        addr_register <= addr_register + 1;
-                        tx_bit_ctr    <= 8;
+                        // Do it when state effectively changes (see above...)
+                        if (curr_scl)
+                        begin    
+                            tx_byte       <= in_mem_data;
+                            addr_register <= addr_register + 1;
+
+                            tx_bit_num <= 8;
+                            tx_bit_idx <= 0;
+                        end
                     end
 
                 endcase
             end
         end
     end
-    
-    // Start detection
-    always @ (negedge in_sda)
-    begin
-        if (in_scl === 1)
-        begin
-            flag_start_det <= 1;
-        end
-    end
 
-    // Stop detection
-    always @ (posedge in_sda)
-    begin
-        if (in_scl === 1)
-        begin
-            flag_stop_det <= 1;
-        end
-    end
-
-    // Reception
-    always @ (posedge in_scl)
-    begin
-        case (state)
-            STATE_WAIT_I2C_ADDR, STATE_WAIT_DATA_BYTE, STATE_WAIT_ACK:
-            begin
-                rx_byte    <= (rx_byte << 1) | in_sda;
-                rx_bit_ctr <= rx_bit_ctr + 1;
-            end
-
-        endcase
-    end
-
-    // Transmission
-    always @ (negedge in_scl)
-    begin
-        if (tx_bit_ctr > 0)
-        begin
-            out_sda     <= (tx_byte >> (tx_bit_ctr - 1));
-            tx_bit_ctr  <= tx_bit_ctr - 1;
-            // Output Enable will be set with a delay, manged by flag_oe.
-            if (out_sda_oe == 0)  flag_oe <= 1;
-        end
-        else
-        begin
-            out_sda_oe <= 0;
-        end
-    end
 endmodule
 
