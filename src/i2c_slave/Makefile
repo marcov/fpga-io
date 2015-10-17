@@ -5,6 +5,7 @@
 
 MODULE_NAME := i2c_slave
 
+VFLAGS := -D__IVERILOG__ -DROM_MEMORY_INIT_FILE_DIR="."
 
 OBJS_DIR := build
 SIM_DIR  := sim
@@ -35,7 +36,7 @@ all: $(OBJS)
 .SECONDEXPANSION:
 $(OBJS): $(OBJS_DIR)
 	@echo "Making..."
-	iverilog -o $(OBJS_DIR)/$@ $(SRCS)
+	iverilog $(VFLAGS) -o $(OBJS_DIR)/$@ $(SRCS) 
 	vvp build/$@ -lxt2
 	mv $(WAVEFILE) $(OBJS_DIR)
 	@echo "OK"

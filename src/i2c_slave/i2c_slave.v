@@ -36,6 +36,7 @@ module i2c_slave
     wire         curr_scl;  
 
     reg          prev_sda;
+    wire         in_sda;
 
     reg [7 : 0]  rx_byte;
     reg [7 : 0]  rx_byte_upctr;
@@ -46,26 +47,21 @@ module i2c_slave
     reg [7 : 0]  dly_upctr;
     reg          flag_oe;
 
-    assign io_sda = out_sda_oe && !out_sda ? 1'b0 : 1'bz;
-
-    wire in_sda = !(io_sda === 'b0);
-
     assign out_mem_addr = addr_register;
 
+    assign io_sda = out_sda_oe && !out_sda ? 1'b0 : 1'bz;
+
+    assign in_sda   = !(io_sda === 'b0);
     assign curr_scl = !(in_scl === 'b0);
 
 	 /* Combinatorial logic for state(t+1) */
     always @ (state,
               rx_bit_ctr,
               tx_bit_idx,
-              tx_bit_num,
               flag_rw,
               flag_start_det,
               flag_stop_det,
-              rx_byte,
-              out_sda_oe,
-              flag_oe,
-              dly_upctr) 
+              rx_byte) 
     begin: next_state_logic
         /* Set a default state to avoid latches creation */
         next_state = state;
@@ -90,7 +86,6 @@ module i2c_slave
                     if (rx_bit_ctr >= 8)
                     begin
                         next_state = ((rx_byte >> 1) == 'h50) ? STATE_TX_ACK : STATE_IDLE;
-                        flag_rw    = (rx_byte & 'b1); 
                     end
                 end
 
@@ -150,7 +145,6 @@ module i2c_slave
             out_sda        <= 1;
             rx_bit_ctr     <= 0;
             state          <= STATE_IDLE;
-            next_state     <= STATE_IDLE;
             rx_byte        <= 0;
             rx_byte_upctr  <= 0;
             flag_start_det <= 0;
@@ -247,19 +241,26 @@ module i2c_slave
                             tx_bit_idx <= 0;
                             tx_byte    <= 0;
 
-                            if (state == STATE_WAIT_I2C_ADDR && (flag_rw == 0))
-                            begin
-                                // Not optimal, should not reset the register content in case master does not write...
-                                rx_byte_upctr <= 0;
-                                addr_register <= 0;
-                            end
+                            if (state == STATE_WAIT_I2C_ADDR)
+                            begin                            
+                                if (rx_byte & 'b1)
+                                    flag_rw <= 1;
+                                else
+                                begin
+                                    flag_rw <= 0;
+                                    // Not optimal, should not reset the register content in case master does not write...
+                                    rx_byte_upctr <= 0;
+                                    addr_register <= 0;
+                                end
+                            end    
+
                             if (state == STATE_WAIT_DATA_BYTE)
                             begin
                                 rx_byte_upctr <= rx_byte_upctr + 1;
 
                                 case (rx_byte_upctr)
                                     0:
-                                        addr_register[15 : 8] <= rx_byte;
+                                        addr_register[MEM_ADDR_WIDTH - 1 : 8] <= rx_byte;
                                     1:
                                         addr_register[7 : 0]  <= rx_byte;
                                 endcase

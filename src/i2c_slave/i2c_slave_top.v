@@ -1,5 +1,12 @@
 
 `define ROM_MEMORY_ADDR_WIDTH 	   16
+
+`ifdef __IVERILOG__
+`define ROM_MEMORY_INIT_FILE_PATH  "mem_init_vlog.mif"
+`else
+`define ROM_MEMORY_INIT_FILE_PATH  "C:/mem_init_vlog.mif"
+`endif
+
 `define ROM_MEMORY_DATA_WIDTH 	   8
 `define I2C_SLAVE_SDA_DELAY_CYCLES 3
 
@@ -7,6 +14,7 @@
 module i2c_slave_top
   #(parameter TOP_ROM_MEM_ADDR_WIDTH = `ROM_MEMORY_ADDR_WIDTH,
     parameter TOP_ROM_MEM_DATA_WIDTH = `ROM_MEMORY_DATA_WIDTH,
+    parameter TOP_ROM_MEM_INIT_FILE  = `ROM_MEMORY_INIT_FILE_PATH,
     parameter TOP_SDA_SETUP_DELAY_CYCLES = `I2C_SLAVE_SDA_DELAY_CYCLES)
    (input in_ext_osc,
     input in_reset_n,
@@ -33,7 +41,8 @@ module i2c_slave_top
 
 
     rom_lookup_table #(.ROM_ADDR_WIDTH(TOP_ROM_MEM_ADDR_WIDTH),
-                       .ROM_DATA_WIDTH(TOP_ROM_MEM_DATA_WIDTH)) 
+                       .ROM_DATA_WIDTH(TOP_ROM_MEM_DATA_WIDTH),
+                       .MEM_INIT_FILE_PATH(TOP_ROM_MEM_INIT_FILE)) 
 		rom_mem_inst (.in_clk(clk_top_main),
  				 	  .in_addr(rom_addr),
  				 	  .out_data(rom_data));
