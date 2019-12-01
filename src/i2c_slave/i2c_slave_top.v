@@ -1,5 +1,5 @@
 
-`define ROM_MEMORY_ADDR_WIDTH 	   16
+`define ROM_MEMORY_ADDR_WIDTH 	  15 
 
 `ifdef __IVERILOG__
 `define ROM_MEMORY_INIT_FILE_PATH  "mem_init_vlog.mif"

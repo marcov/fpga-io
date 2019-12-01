@@ -62,8 +62,9 @@ module i2c_slave_top_testbench;
         eeprom_read_at_address('h0001, 4);
         $display("\n===============================\n");
 
+
         #200
-        eeprom_read_at_address('hAACC, 8);
+        eeprom_read_at_address('hAACC & (i2c_slave_top_iut.TOP_ROM_MEM_ADDR_WIDTH - 1), 8);
         $display("\n===============================\n");
         
         

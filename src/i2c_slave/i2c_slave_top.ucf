@@ -1,5 +1,5 @@
 ####
-CONFIG ENABLE_SUSPEND = "NO";
+CONFIG ENABLE_SUSPEND  = NO;
 
 
 ########### IO constraints
@@ -10,14 +10,25 @@ CONFIG ENABLE_SUSPEND = "NO";
 
 #RESET
 NET "in_reset_n" LOC = R13;
-NET "in_reset_n" IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE;
+NET "in_reset_n" SUSPEND = 3STATE;
+NET "in_reset_n" IOSTANDARD = LVCMOS33;
 
 #External oscillator
 NET "in_ext_osc" LOC = R9;
-NET "in_ext_osc" IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE; 
+NET "in_ext_osc" SUSPEND = 3STATE;
+NET "in_ext_osc" IOSTANDARD = LVCMOS33;
 
 
 #I2C
-NET "io_i2c_sda"    LOC = D11 | SLEW = FAST | DRIVE = 4;
-NET "in_i2c_scl"    LOC = D9 | SLEW = FAST | DRIVE = 4;
-NET "*_i2c_*"       IOSTANDARD = LVCMOS33 | SUSPEND = 3STATE_PULLUP;
+NET "io_i2c_sda" LOC = C13;
+NET "io_i2c_sda" DRIVE = 4;
+NET "io_i2c_sda" SLEW = FAST;
+
+NET "in_i2c_scl" LOC = D13;
+NET "in_i2c_scl" DRIVE = 4;
+NET "in_i2c_scl" SLEW = FAST;
+
+NET "*_i2c_*" SUSPEND = 3STATE_PULLUP;
+
+NET "in_i2c_scl" IOSTANDARD = LVCMOS25;
+NET "io_i2c_sda" IOSTANDARD = LVCMOS25;
