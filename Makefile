@@ -1,6 +1,7 @@
 ######################################################################
 
 MODULE_NAME ?= threewire_basic
+$(info Building for module: $(MODULE_NAME))
 
 ######################################################################
 
@@ -23,28 +24,27 @@ include $(SRC_SUBDIR)/$(MODULE_NAME)/Makefile.inc
 $#####################################################################
 
 SRC_CORE = \
-	$(SRC_SUBDIR)/ft245a_usb_if.v \
-	$(SRC_SUBDIR)/ram_singleport.v \
-	$(SRC_SUBDIR)/ram_dualport.v \
-	$(SRC_SUBDIR)/led_ctrl.v \
-	$(SRC_SUBDIR)/rom_lut.v \
-	$(SRC_SUBDIR)/io_synchronizer.v \
+  $(SRC_SUBDIR)/ft245a_usb_if.v \
+  $(SRC_SUBDIR)/ram_singleport.v \
+  $(SRC_SUBDIR)/ram_dualport.v \
+  $(SRC_SUBDIR)/led_ctrl.v \
+  $(SRC_SUBDIR)/rom_lut.v \
+  $(SRC_SUBDIR)/io_synchronizer.v \
 
 SRC_CORE_MODEL = \
-	$(SRC_SUBDIR)/$(SIM_SUBDIR)/ft2232h_model.v \
-	$(SRC_SUBDIR)/$(SIM_SUBDIR)/clockgen_model.v
+  $(SRC_SUBDIR)/$(SIM_SUBDIR)/ft2232h_model.v \
+  $(SRC_SUBDIR)/$(SIM_SUBDIR)/clockgen_model.v
 
 ######################################################################
 
 SRC_ALL = \
-		  $(SRC_CORE) \
-          $(SRC_CORE_MODEL)
+  $(SRC_CORE) \
+  $(SRC_CORE_MODEL)
 
 ######################################################################
 $(info SRC MODULE:       "$(SRC_MODULE)")
 $(info SRC MODULE MODEL: "$(SRC_MODULE_MODEL)")
 $(info SRC MODULE TEST:  "$(SRC_MODULE_TEST)")
-
 
 #dirs := a b c d
 #files := $(foreach dir,$(dirs),foobar/$(dir))
@@ -55,26 +55,21 @@ SRC_AUTO += $(foreach src_file,$(SRC_MODULE),$(SRC_SUBDIR)/$(MODULE_NAME)/$(src_
 SRC_AUTO += $(foreach src_file,$(SRC_MODULE_MODEL),$(SRC_SUBDIR)/$(MODULE_NAME)/sim/$(src_file))
 SRC_AUTO += $(foreach src_file,$(SRC_MODULE_TEST),$(SRC_SUBDIR)/$(MODULE_NAME)/sim/$(src_file))
 
-$(info src auto: "$(SRC_AUTO)")
-$(info )
-$(info )
-
 SRC_ALL += $(SRC_AUTO)
 
-$(info src ALL: "$(SRC_ALL)")
-$(info )
-$(info )
+#$(info src auto: "$(SRC_AUTO)")
+#$(info src ALL: "$(SRC_ALL)")
 ######################################################################
 
 IVERILOG_DEFINES=-D__IVERILOG__ \
-				 -DTHREEWIRE_FOR_NFC \
-				 -DBUILD_FOR_SIMULATION \
-                 -DSIMULATION_SEED_INITIAL=$(shell echo $$RANDOM) \
-				 #-DSIM_RUN_ALL_ADDR_DATA_BITS
+  -DTHREEWIRE_FOR_NFC \
+  -DBUILD_FOR_SIMULATION \
+  -DSIMULATION_SEED_INITIAL=$(shell echo $$RANDOM) \
+  #-DSIM_RUN_ALL_ADDR_DATA_BITS
 
 IVERILOG_DEFINES += \
-                 -I $(CURR_DIR)/$(SRC_SUBDIR) \
-                 -I $(CURR_DIR)/$(SRC_SUBDIR)/$(MODULE_NAME)
+  -I $(CURR_DIR)/$(SRC_SUBDIR) \
+  -I $(CURR_DIR)/$(SRC_SUBDIR)/$(MODULE_NAME)
 
 ######################################################################
 
@@ -83,21 +78,21 @@ IVERILOG_DEFINES += \
 	iverilog $(IVERILOG_DEFINES) -o $*.vvp src/$(MODULE_NAME)/$*.v src/$(MODULE_NAME)/$*_test.v
 	vvp $*.vvp -lxt2
 
-all: $(SRC_COMMON) $(SRC_THREEWIRE)
-	iverilog  $(IVERILOG_DEFINES) -o top_simulation.vvp $(SRC_ALL)
-	vvp top_simulation.vvp -lxt2
+all: top_testbench.lxt # Build verilog module + run simulation. Set MODULE_NAME to the one of (threewire_basic, threewire_burst, io_bitbang, i2c_slave)
 
-sim:
-	gtkwave test.lxt
+top_testbench.lxt: top_simulation.vvp
+	vvp $^ -lxt2
 
-help:
-	@echo "Build verilog module + run simulation"
-	@echo "Usage make MODULE=<module-name>"
-	@echo "Current supported modules:"
-	@echo "-threewire_basic"
-	@echo "-threewire_burst"
-	@echo "-io_bitbang"
+top_simulation.vvp: $(SRC_COMMON) $(SRC_THREEWIRE)
+	iverilog  $(IVERILOG_DEFINES) -o $@ $(SRC_ALL)
 
+.PHONY: sim
+sim: top_testbench.lxt # Show the simulation result in GTKWave
+	gtkwave $^
+
+.PHONY: help
+help: ## this help
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {gsub("\\\\n",sprintf("\n%22c",""), $$2);printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: clean
 clean:
